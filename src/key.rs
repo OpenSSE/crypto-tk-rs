@@ -8,18 +8,25 @@ pub struct Key256 {
 }
 
 impl Key256 {
-    pub fn new() -> Key256 {
-        let mut rng = thread_rng();
-        // we cannot call rng.gen() on 64 elements arrays (it is limited to 32 elements)
+    pub fn generate<R>(csprng: &mut R) -> Key256
+    where
+        R: CryptoRng + RngCore,
+    {
+        // we cannot call csprng.gen() on 64 elements arrays (it is limited to 32 elements)
         // instead, create a zeroizing buffer and fill it with rng.fill_bytes
         let mut randomness = Zeroizing::new([0u8; 64]);
-        rng.fill_bytes(&mut *randomness);
+        csprng.fill_bytes(&mut *randomness);
 
         let k = Key256 {
             content: *randomness,
         };
 
         k
+    }
+
+    pub fn new() -> Key256 {
+        let mut rng = thread_rng();
+        return Key256::generate(&mut rng);
     }
 
     pub fn new_from(randomness: &mut [u8; 64]) -> Key256 {
