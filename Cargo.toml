@@ -11,7 +11,6 @@ readme = "README.md"
 categories = ["cryptography"]
 keywords = ["cryptography", "crypto-library"]
 license = "AGPL-3.0-or-later"
-license-file = "LICENSE"
 
 [dependencies]
 zeroize = {version = "^1.1", features = ["zeroize_derive"]}

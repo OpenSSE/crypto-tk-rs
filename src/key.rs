@@ -1,6 +1,9 @@
+//! Secret Keys
+
 use rand::prelude::*;
 use zeroize::{Zeroize, Zeroizing};
 
+/// A 256 bits (64 bytes) secret key. The key is zeroed upon drop.
 #[derive(Zeroize)]
 #[zeroize(drop)]
 pub struct Key256 {
@@ -8,6 +11,18 @@ pub struct Key256 {
 }
 
 impl Key256 {
+    /// Construct a `Key256` key from random data coming out of a
+    /// cryptographically-secure PRNG.
+    ///
+    /// # Example
+    /// ```
+    /// # extern crate crypto_tk_rs;
+    /// # extern crate rand;
+    /// use crypto_tk_rs::Key256;
+    /// use rand::prelude::*;
+    ///
+    /// let k = Key256::generate(&mut thread_rng());
+    /// ```
     pub fn generate<R>(csprng: &mut R) -> Key256
     where
         R: CryptoRng + RngCore,
@@ -24,12 +39,30 @@ impl Key256 {
         k
     }
 
+    /// Construct a `Key256` key from random data coming out of the OS CSPRNG.
     pub fn new() -> Key256 {
         let mut rng = thread_rng();
         return Key256::generate(&mut rng);
     }
 
-    pub fn new_from(randomness: &mut [u8; 64]) -> Key256 {
+    /// Construct a `Key256` key from a slice of bytes and zero the slice.
+    ///
+    /// # Warning
+    /// The input slice `randomness` will be zero after the function returns.
+    ///
+    /// # Example
+    /// ```
+    /// # extern crate crypto_tk_rs;
+    /// use crypto_tk_rs::Key256;
+    ///
+    /// /// Initializes a new key with bytes all set to `0x01`
+    /// let mut buf = [1u8;64];
+    /// let k = Key256::from_bytes(&mut buf);
+    /// /// buf is set to all 0
+    /// # assert_eq!(&buf[0..32], [0u8; 32]);
+    /// # assert_eq!(&buf[32..64], [0u8; 32]);
+    /// ```
+    pub fn from_bytes(randomness: &mut [u8; 64]) -> Key256 {
         let k = Key256 {
             content: *randomness,
         };
@@ -55,7 +88,7 @@ mod tests {
         let mut buf_copy = [0u8; 64];
         buf_copy.copy_from_slice(&buf);
 
-        let k = Key256::new_from(&mut buf);
+        let k = Key256::from_bytes(&mut buf);
 
         // cannot compare 64 elements arrays (the comparison works for at most
         // 32 elements). We have to split the comparison in two
