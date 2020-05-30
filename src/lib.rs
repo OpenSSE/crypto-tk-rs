@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
+#![cfg_attr(feature = "with-bench", feature(test))]
 
 //! A Rust toolkit for cryptographic primitives useful to implement
 //! cryptographic algorithms and protocols (in particular searchable
@@ -17,6 +18,9 @@
 //! This is code for a **research project**. It **should not be used in
 //! production**: the code lacks good Rust security practice, and it has
 //! never been externally reviewed.
+
+#[cfg(all(test, feature = "with-bench"))]
+extern crate test;
 
 pub mod key;
 pub mod prf;

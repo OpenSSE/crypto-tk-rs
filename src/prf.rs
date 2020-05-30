@@ -37,7 +37,8 @@ impl Prf {
             let out_length = remaining_length.min(blake2b_simd::OUTBYTES);
 
             let mut params = blake2b_simd::Params::new();
-            params.hash_length(output.len());
+            params.key(&self.key.content);
+            params.hash_length(out_length);
             params.salt(&i.to_le_bytes());
 
             let mut state = params.to_state();
@@ -57,5 +58,59 @@ impl Prf {
             written_bytes += out_length;
             i += 1;
         }
+    }
+}
+
+#[cfg(all(test, feature = "with-bench"))]
+mod tests {
+    use super::*;
+    use test::Bencher;
+
+    #[bench]
+    fn prf_16_bytes(b: &mut Bencher) {
+        let prf = Prf::new();
+        let in_buffer = [0u8; 16];
+        let mut out_buffer = [0u8; 16];
+        b.iter(|| prf.fill_bytes(&in_buffer, &mut out_buffer));
+    }
+
+    #[bench]
+    fn prf_32_bytes(b: &mut Bencher) {
+        let prf = Prf::new();
+        let in_buffer = [0u8; 16];
+        let mut out_buffer = [0u8; 32];
+        b.iter(|| prf.fill_bytes(&in_buffer, &mut out_buffer));
+    }
+
+    #[bench]
+    fn prf_64_bytes(b: &mut Bencher) {
+        let prf = Prf::new();
+        let in_buffer = [0u8; 16];
+        let mut out_buffer = [0u8; 64];
+        b.iter(|| prf.fill_bytes(&in_buffer, &mut out_buffer));
+    }
+
+    #[bench]
+    fn prf_128_bytes(b: &mut Bencher) {
+        let prf = Prf::new();
+        let in_buffer = [0u8; 16];
+        let mut out_buffer = [0u8; 128];
+        b.iter(|| prf.fill_bytes(&in_buffer, &mut out_buffer));
+    }
+
+    #[bench]
+    fn prf_256_bytes(b: &mut Bencher) {
+        let prf = Prf::new();
+        let in_buffer = [0u8; 16];
+        let mut out_buffer = [0u8; 256];
+        b.iter(|| prf.fill_bytes(&in_buffer, &mut out_buffer));
+    }
+
+    #[bench]
+    fn prf_512_bytes(b: &mut Bencher) {
+        let prf = Prf::new();
+        let in_buffer = [0u8; 16];
+        let mut out_buffer = [0u8; 512];
+        b.iter(|| prf.fill_bytes(&in_buffer, &mut out_buffer));
     }
 }
