@@ -62,6 +62,7 @@ mod tests {
         assert_eq!(&k.content[0..32], &buf_copy[0..32]);
         assert_eq!(&k.content[32..64], &buf_copy[32..64]);
 
+        // check that the buffer we built the key from has been cleared
         assert_eq!(&buf[0..32], [0u8; 32]);
         assert_eq!(&buf[32..64], [0u8; 32]);
     }
