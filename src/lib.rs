@@ -19,6 +19,10 @@
 //! never been externally reviewed.
 
 pub mod key;
+pub mod prf;
+pub mod utils;
 
-// Export everything public in key.
+// Export everything public modules
 pub use crate::key::*;
+pub use crate::prf::*;
+pub use crate::utils::*;
