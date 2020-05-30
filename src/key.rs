@@ -59,8 +59,7 @@ impl Key256 {
     /// let mut buf = [1u8;64];
     /// let k = Key256::from_bytes(&mut buf);
     /// /// buf is set to all 0
-    /// # assert_eq!(&buf[0..32], [0u8; 32]);
-    /// # assert_eq!(&buf[32..64], [0u8; 32]);
+    /// # assert_eq!(&buf[..], &[0u8; 64][..]);
     /// ```
     pub fn from_bytes(randomness: &mut [u8; 64]) -> Key256 {
         let k = Key256 {
@@ -91,12 +90,10 @@ mod tests {
         let k = Key256::from_bytes(&mut buf);
 
         // cannot compare 64 elements arrays (the comparison works for at most
-        // 32 elements). We have to split the comparison in two
-        assert_eq!(&k.content[0..32], &buf_copy[0..32]);
-        assert_eq!(&k.content[32..64], &buf_copy[32..64]);
+        // 32 elements). We have to compare slices
+        assert_eq!(&k.content[..], &buf_copy[..]);
 
         // check that the buffer we built the key from has been cleared
-        assert_eq!(&buf[0..32], [0u8; 32]);
-        assert_eq!(&buf[32..64], [0u8; 32]);
+        assert_eq!(&buf[..], &[0u8; 64][..]);
     }
 }
