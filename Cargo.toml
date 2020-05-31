@@ -12,8 +12,12 @@ categories = ["cryptography"]
 keywords = ["cryptography", "crypto-library"]
 license = "AGPL-3.0-or-later"
 
-[features]
-with-bench = [] # requires nightly
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "benchmarks"
+harness = false
 
 [dependencies]
 zeroize = {version = "^1.1", features = ["zeroize_derive"]}

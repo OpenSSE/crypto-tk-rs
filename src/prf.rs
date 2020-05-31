@@ -60,28 +60,3 @@ impl Prf {
         }
     }
 }
-
-#[cfg(all(test, feature = "with-bench"))]
-mod tests {
-    use super::*;
-    use test::Bencher;
-    
-    macro_rules! prf_bench {
-        ($name:ident ,$size:expr) => {
-            #[bench]
-            fn $name(b: &mut Bencher) {
-                let prf = Prf::new();
-                let in_buffer = [0u8; 16];
-                let mut out_buffer = [0u8; $size];
-                b.iter(|| prf.fill_bytes(&in_buffer, &mut out_buffer));
-            }
-        };
-    }
-
-    prf_bench!(prf_16_bytes, 16);
-    prf_bench!(prf_32_bytes, 32);
-    prf_bench!(prf_64_bytes, 64);
-    prf_bench!(prf_128_bytes, 128);
-    prf_bench!(prf_256_bytes, 256);
-    prf_bench!(prf_512_bytes, 512);
-}
