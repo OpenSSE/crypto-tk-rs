@@ -6,7 +6,29 @@ use blake2b_simd;
 use clear_on_drop::clear::Clear;
 use zeroize::Zeroize;
 
-/// Pseudo random function impl
+/// Pseudo random function.
+///
+/// ## Evaluation algorithm
+///
+/// The PRF is based on Blake2b's keyed mode associated with a counter.
+/// The main attacks we want to prevent here, aside from weak
+/// pseudo-randomness issues that are prevented by the use of Blake2,
+/// are length-extension attacks: when called to output 16 bytes, the PRF
+/// should not output the prefix of the output for 32 bytes.
+/// More generally, we would like to specialize the PRF on its output length
+/// (as it has been done with the original C++ `crypto-tk` implementation,
+/// thought the use of templates), but the absence of const generics in Rust
+/// prevents us to do so. Hence, this is ensured during the evaluation (the
+/// `fill_bytes` function).
+///
+/// Note that Blake2 normally only outputs at most 64 bytes, while we would like
+/// to be able to produce larger outputs. As a consequence, we use Blake2 in a
+/// counter mode to produce the successive 64-bytes-or-less blocks needed.
+/// For each block, we use the input as Blake2's input, the PRF key as its key,
+/// the block's index as salt, and the total length as personalization.
+/// Those last two parameters are encode in little-endianness.
+///
+///
 #[derive(Zeroize)]
 #[zeroize(drop)]
 pub struct Prf {
@@ -25,14 +47,15 @@ impl Prf {
         Prf { key }
     }
 
-    /// Fill a slice with pseudo-random bytes resulting from the PRF evaluation
+    /// Fill a slice with pseudo-random bytes resulting from the PRF evaluation.
     pub fn fill_bytes(self: &Self, input: &[u8], output: &mut [u8]) {
         let mut hash: blake2b_simd::Hash;
 
         let mut remaining_length = output.len();
         let mut written_bytes = 0;
-
+        let tot_output_len: u64 = output.len() as u64;
         let mut i = 0u64;
+
         while remaining_length > 0 {
             let out_length = remaining_length.min(blake2b_simd::OUTBYTES);
 
@@ -40,6 +63,7 @@ impl Prf {
             params.key(&self.key.content);
             params.hash_length(out_length);
             params.salt(&i.to_le_bytes());
+            params.personal(&tot_output_len.to_le_bytes());
 
             let mut state = params.to_state();
             state.update(input);
