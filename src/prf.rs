@@ -65,52 +65,23 @@ impl Prf {
 mod tests {
     use super::*;
     use test::Bencher;
-
-    #[bench]
-    fn prf_16_bytes(b: &mut Bencher) {
-        let prf = Prf::new();
-        let in_buffer = [0u8; 16];
-        let mut out_buffer = [0u8; 16];
-        b.iter(|| prf.fill_bytes(&in_buffer, &mut out_buffer));
+    
+    macro_rules! prf_bench {
+        ($name:ident ,$size:expr) => {
+            #[bench]
+            fn $name(b: &mut Bencher) {
+                let prf = Prf::new();
+                let in_buffer = [0u8; 16];
+                let mut out_buffer = [0u8; $size];
+                b.iter(|| prf.fill_bytes(&in_buffer, &mut out_buffer));
+            }
+        };
     }
 
-    #[bench]
-    fn prf_32_bytes(b: &mut Bencher) {
-        let prf = Prf::new();
-        let in_buffer = [0u8; 16];
-        let mut out_buffer = [0u8; 32];
-        b.iter(|| prf.fill_bytes(&in_buffer, &mut out_buffer));
-    }
-
-    #[bench]
-    fn prf_64_bytes(b: &mut Bencher) {
-        let prf = Prf::new();
-        let in_buffer = [0u8; 16];
-        let mut out_buffer = [0u8; 64];
-        b.iter(|| prf.fill_bytes(&in_buffer, &mut out_buffer));
-    }
-
-    #[bench]
-    fn prf_128_bytes(b: &mut Bencher) {
-        let prf = Prf::new();
-        let in_buffer = [0u8; 16];
-        let mut out_buffer = [0u8; 128];
-        b.iter(|| prf.fill_bytes(&in_buffer, &mut out_buffer));
-    }
-
-    #[bench]
-    fn prf_256_bytes(b: &mut Bencher) {
-        let prf = Prf::new();
-        let in_buffer = [0u8; 16];
-        let mut out_buffer = [0u8; 256];
-        b.iter(|| prf.fill_bytes(&in_buffer, &mut out_buffer));
-    }
-
-    #[bench]
-    fn prf_512_bytes(b: &mut Bencher) {
-        let prf = Prf::new();
-        let in_buffer = [0u8; 16];
-        let mut out_buffer = [0u8; 512];
-        b.iter(|| prf.fill_bytes(&in_buffer, &mut out_buffer));
-    }
+    prf_bench!(prf_16_bytes, 16);
+    prf_bench!(prf_32_bytes, 32);
+    prf_bench!(prf_64_bytes, 64);
+    prf_bench!(prf_128_bytes, 128);
+    prf_bench!(prf_256_bytes, 256);
+    prf_bench!(prf_512_bytes, 512);
 }
