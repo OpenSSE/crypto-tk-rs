@@ -60,7 +60,7 @@ impl Prf {
             let out_length = remaining_length.min(blake2b_simd::OUTBYTES);
 
             let mut params = blake2b_simd::Params::new();
-            params.key(&self.key.content);
+            params.key(self.key.content());
             params.hash_length(out_length);
             params.salt(&i.to_le_bytes());
             params.personal(&tot_output_len.to_le_bytes());

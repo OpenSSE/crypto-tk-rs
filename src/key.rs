@@ -7,7 +7,7 @@ use zeroize::{Zeroize, Zeroizing};
 #[derive(Zeroize)]
 #[zeroize(drop)]
 pub struct Key256 {
-    pub(crate) content: [u8; 64],
+    content: [u8; 64],
 }
 
 impl Key256 {
@@ -67,6 +67,11 @@ impl Key256 {
         };
         randomness.zeroize();
         k
+    }
+
+    /// Get the content of the key
+    pub(crate) fn content(&self) -> &[u8] {
+        &self.content
     }
 }
 
