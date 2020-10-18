@@ -48,6 +48,9 @@ impl Prf {
     }
 
     /// Fill a slice with pseudo-random bytes resulting from the PRF evaluation.
+    /// The output length is used as a parameter of the PRF (think additional input data).
+    /// The PRF is called in counter mode, so as to be able to fill slices larger than the base-PRF's output size.
+    /// In this implementation based on Blake2b, the counter is input as the salt of the PRF evaluation.
     pub fn fill_bytes(self: &Self, input: &[u8], output: &mut [u8]) {
         let mut hash: blake2b_simd::Hash;
 
