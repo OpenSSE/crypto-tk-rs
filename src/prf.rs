@@ -26,7 +26,7 @@ use zeroize::Zeroize;
 /// counter mode to produce the successive 64-bytes-or-less blocks needed.
 /// For each block, we use the input as Blake2's input, the PRF key as its key,
 /// the block's index as salt, and the total length as personalization.
-/// Those last two parameters are encode in little-endianness.
+/// Those last two parameters are little-endian encoded.
 ///
 ///
 #[derive(Zeroize)]
@@ -72,7 +72,8 @@ impl Prf {
             state.update(input);
 
             hash = state.finalize();
-            output[written_bytes..written_bytes + out_length].copy_from_slice(hash.as_bytes());
+            output[written_bytes..written_bytes + out_length]
+                .copy_from_slice(hash.as_bytes());
 
             // cleanup
             params.clear();
