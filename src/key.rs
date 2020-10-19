@@ -1,7 +1,7 @@
 //! Secret Keys
 
 use rand::prelude::*;
-use zeroize::{Zeroize, Zeroizing};
+use zeroize::Zeroize;
 
 /// A 256 bits (64 bytes) secret key. The key is zeroed upon drop.
 #[derive(Zeroize)]
@@ -35,7 +35,7 @@ impl Key256 {
     /// Construct a `Key256` key from random data coming out of the OS CSPRNG.
     pub fn new() -> Key256 {
         let mut rng = thread_rng();
-        return Key256::generate(&mut rng);
+        Key256::generate(&mut rng)
     }
 
     /// Construct a `Key256` key from a slice of bytes and zero the slice.

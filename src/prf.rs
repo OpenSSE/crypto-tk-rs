@@ -2,7 +2,6 @@
 
 use crate::key::Key256;
 
-use blake2b_simd;
 use clear_on_drop::clear::Clear;
 use zeroize::Zeroize;
 
@@ -42,6 +41,9 @@ impl Prf {
     }
 
     /// Construct a PRF from a new random key
+    #[allow(clippy::new_without_default)] // This is done on purpose to avoid
+                                          // involuntary creation of a PRF with
+                                          // a random key
     pub fn new() -> Prf {
         let key = Key256::new();
         Prf { key }
@@ -51,7 +53,7 @@ impl Prf {
     /// The output length is used as a parameter of the PRF (think additional input data).
     /// The PRF is called in counter mode, so as to be able to fill slices larger than the base-PRF's output size.
     /// In this implementation based on Blake2b, the counter is input as the salt of the PRF evaluation.
-    pub fn fill_bytes(self: &Self, input: &[u8], output: &mut [u8]) {
+    pub fn fill_bytes(&self, input: &[u8], output: &mut [u8]) {
         let mut hash: blake2b_simd::Hash;
 
         let mut remaining_length = output.len();

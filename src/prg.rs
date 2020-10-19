@@ -35,13 +35,16 @@ impl Prg {
     }
 
     /// Construct a PRG from a new random key
+    #[allow(clippy::new_without_default)] // This is done on purpose to avoid
+                                          // involuntary creation of a PRG with
+                                          // a random key
     pub fn new() -> Prg {
         let key = Key256::new();
         Prg { key }
     }
 
     /// Fill a slice with pseudo-random bytes resulting from the PRG evaluation.
-    pub fn fill_pseudo_random_bytes(self: &Self, output: &mut [u8]) {
+    pub fn fill_pseudo_random_bytes(&self, output: &mut [u8]) {
         // while we wait for the Chacha implementation to implement zeroize,
         // use the stack-clearing interface from clear_on_drop
         clear_stack_on_return(1, || {
@@ -72,7 +75,7 @@ impl Prg {
     /// ```
     ///
     pub fn fill_offset_pseudo_random_bytes(
-        self: &Self,
+        &self,
         offset: usize,
         output: &mut [u8],
     ) {
