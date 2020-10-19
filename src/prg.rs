@@ -1,6 +1,6 @@
 //! Pseudo-random generator
 
-use crate::key::Key256;
+use crate::key::{Key, Key256, KeyAccessor};
 use chacha20::cipher::{
     NewStreamCipher, SyncStreamCipher, SyncStreamCipherSeek,
 };

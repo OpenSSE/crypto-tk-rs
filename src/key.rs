@@ -3,15 +3,12 @@
 use rand::prelude::*;
 use zeroize::Zeroize;
 
-/// A 256 bits (64 bytes) secret key. The key is zeroed upon drop.
-#[derive(Zeroize)]
-#[zeroize(drop)]
-pub struct Key256 {
-    content: [u8; 32],
-}
+/// Wrapper trait for key material
+pub trait Key {
+    /// Size of the key in bytes
+    const KEY_SIZE: usize;
 
-impl Key256 {
-    /// Construct a `Key256` key from random data coming out of a
+    /// Construct a key from random data coming out of a
     /// cryptographically-secure PRNG.
     ///
     /// # Example
@@ -23,21 +20,31 @@ impl Key256 {
     ///
     /// let k = Key256::generate(&mut thread_rng());
     /// ```
-    pub fn generate<R>(csprng: &mut R) -> Key256
+    fn generate<R>(csprng: &mut R) -> Self
     where
-        R: CryptoRng + RngCore,
-    {
-        let mut k = Key256 { content: [0u8; 32] };
-        csprng.fill_bytes(&mut k.content);
-        k
-    }
+        R: CryptoRng + RngCore;
 
-    /// Construct a `Key256` key from random data coming out of the OS CSPRNG.
-    pub fn new() -> Key256 {
-        let mut rng = thread_rng();
-        Key256::generate(&mut rng)
-    }
+    /// Construct a key from random data coming out of the OS CSPRNG.
+    fn new() -> Self;
 
+    /// Duplicates the key.
+    /// Would be similar to `clone()`, except we want to make sure that the user knows this leads to security issues.
+    /// This function is only available in `test` mode (it should not be used in production code).
+    #[cfg(test)]
+    fn insecure_duplicate(&self) -> Self;
+}
+
+pub(crate) trait KeyAccessor {
+    fn content(&self) -> &[u8];
+}
+
+/// A 256 bits (64 bytes) secret key. The key is zeroed upon drop.
+#[derive(Zeroize)]
+#[zeroize(drop)]
+pub struct Key256 {
+    content: [u8; 32],
+}
+impl Key256 {
     /// Construct a `Key256` key from a slice of bytes and zero the slice.
     ///
     /// # Warning
@@ -61,21 +68,38 @@ impl Key256 {
         randomness.zeroize();
         k
     }
+}
 
-    /// Get the content of the key
-    /// This accessor in only available to `crypto-tk` crate.
-    pub(crate) fn content(&self) -> &[u8] {
-        &self.content
+impl Key for Key256 {
+    const KEY_SIZE: usize = 32;
+
+    fn generate<R>(csprng: &mut R) -> Self
+    where
+        R: CryptoRng + RngCore,
+    {
+        let mut k = Key256 { content: [0u8; 32] };
+        csprng.fill_bytes(&mut k.content);
+        k
     }
 
-    /// Duplicates the key.
-    /// Would be similar to `clone()`, except we want to make sure that the user knows this leads to security issues.
-    /// This function is only available in `test` mode (it should not be used in production code).
+    fn new() -> Self {
+        let mut rng = thread_rng();
+        Key256::generate(&mut rng)
+    }
+
     #[cfg(test)]
-    pub fn insecure_duplicate(&self) -> Key256 {
-        return Key256 {
+    fn insecure_duplicate(&self) -> Self {
+        return Self {
             content: self.content.clone(),
         };
+    }
+}
+
+impl KeyAccessor for Key256 {
+    /// Get the content of the key
+    /// This accessor in only available to `crypto-tk` crate.
+    fn content(&self) -> &[u8] {
+        &self.content
     }
 }
 

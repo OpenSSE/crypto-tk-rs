@@ -1,6 +1,6 @@
 //! Pseudo-random function
 
-use crate::key::Key256;
+use crate::key::{Key, Key256, KeyAccessor};
 
 use clear_on_drop::clear::Clear;
 use zeroize::Zeroize;
