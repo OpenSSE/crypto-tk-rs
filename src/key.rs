@@ -70,8 +70,19 @@ impl Key256 {
     }
 
     /// Get the content of the key
+    /// This accessor in only available to `crypto-tk` crate.
     pub(crate) fn content(&self) -> &[u8] {
         &self.content
+    }
+
+    /// Duplicates the key.
+    /// Would be similar to `clone()`, except we want to make sure that the user knows this leads to security issues.
+    /// This function is only available in `test` mode (it should not be used in production code).
+    #[cfg(test)]
+    pub fn insecure_duplicate(&self) -> Key256 {
+        return Key256 {
+            content: self.content.clone(),
+        };
     }
 }
 
@@ -94,9 +105,12 @@ mod tests {
 
         let k = Key256::from_bytes(&mut buf);
 
-        // cannot compare 64 elements arrays (the comparison works for at most
-        // 32 elements). We have to compare slices
+        // The following comment was true prior Rust 1.47, but changed with the introduction of traits on arrays of any length.
+        // We cannot compare 64 elements arrays (the comparison works for at most
+        // 32 elements). We have to compare slices.
         assert_eq!(&k.content[..], &buf_copy[..]);
+
+        assert_eq!(&k.content[..], &k.insecure_duplicate().content[..]);
 
         // check that the buffer we built the key from has been cleared
         assert_eq!(&buf[..], &[0u8; 64][..]);
