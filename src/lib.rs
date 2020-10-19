@@ -24,9 +24,11 @@
 
 pub mod key;
 pub mod prf;
+pub mod prg;
 pub mod utils;
 
 // Export everything public modules
 pub use crate::key::*;
 pub use crate::prf::*;
+pub use crate::prg::*;
 pub use crate::utils::*;
