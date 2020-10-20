@@ -15,7 +15,7 @@ pub trait Key {
     /// ```
     /// # extern crate crypto_tk_rs;
     /// # extern crate rand;
-    /// use crypto_tk_rs::Key256;
+    /// use crypto_tk_rs::{Key256, Key};
     /// use rand::prelude::*;
     ///
     /// let k = Key256::generate(&mut thread_rng());
@@ -26,6 +26,25 @@ pub trait Key {
 
     /// Construct a key from random data coming out of the OS CSPRNG.
     fn new() -> Self;
+
+    /// Construct a key from a slice of bytes and zero the slice.
+    ///
+    /// # Warning
+    /// The  first `KEY_SIZE` bytes of the input slice `randomness` will be
+    /// zero after the function returns.
+    ///
+    /// # Example
+    /// ```
+    /// # extern crate crypto_tk_rs;
+    /// use crypto_tk_rs::{Key256, Key};
+    ///
+    /// /// Initializes a new key with bytes all set to `0x01`
+    /// let mut buf = [1u8;32];
+    /// let k = Key256::from_slice(&mut buf[..]);
+    /// /// buf is set to all 0
+    /// # assert_eq!(buf[..], [0u8; 32]);
+    /// ```
+    fn from_slice(bytes: &mut [u8]) -> Self;
 
     /// Duplicates the key.
     /// Would be similar to `clone()`, except we want to make sure that the user knows this leads to security issues.
@@ -59,7 +78,7 @@ impl Key256 {
     /// let mut buf = [1u8;32];
     /// let k = Key256::from_bytes(&mut buf);
     /// /// buf is set to all 0
-    /// # assert_eq!(&buf[..], &[0u8; 32][..]);
+    /// # assert_eq!(buf, [0u8; 32]);
     /// ```
     pub fn from_bytes(randomness: &mut [u8; 32]) -> Key256 {
         let k = Key256 {
@@ -85,6 +104,15 @@ impl Key for Key256 {
     fn new() -> Self {
         let mut rng = thread_rng();
         Key256::generate(&mut rng)
+    }
+
+    fn from_slice(bytes: &mut [u8]) -> Self {
+        let mut k = Self { content: [0u8; 32] };
+
+        k.content.copy_from_slice(bytes);
+        bytes.zeroize();
+
+        k
     }
 
     #[cfg(test)]
@@ -115,16 +143,21 @@ mod tests {
             0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
         ];
 
-        let mut buf_copy = [0u8; 32];
-        buf_copy.copy_from_slice(&buf);
+        let mut buf_copy_1 = [0u8; 32];
+        let mut buf_copy_2 = [0u8; 32];
+        buf_copy_1.copy_from_slice(&buf);
+        buf_copy_2.copy_from_slice(&buf);
 
-        let k = Key256::from_bytes(&mut buf);
+        let k1 = Key256::from_bytes(&mut buf);
+        let k2 = Key256::from_slice(&mut buf_copy_2[..]);
 
-        assert_eq!(k.content, buf_copy);
+        assert_eq!(k1.content, buf_copy_1);
+        assert_eq!(k2.content, buf_copy_1);
 
-        assert_eq!(k.content, k.insecure_duplicate().content);
+        assert_eq!(k1.content, k1.insecure_duplicate().content);
 
         // check that the buffer we built the key from has been cleared
         assert_eq!(buf, [0u8; 32]);
+        assert_eq!(buf_copy_2, [0u8; 32]);
     }
 }

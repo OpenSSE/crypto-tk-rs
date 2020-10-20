@@ -29,7 +29,7 @@ pub struct Prg {
 impl Prg {
     const PRG_NONCE: [u8; 12] = [0u8; 12];
 
-    /// Construct a PRF from a 256 bits key
+    /// Construct a PRG from a 256 bits key
     pub fn from_key(key: Key256) -> Prg {
         Prg { key }
     }
@@ -94,6 +94,59 @@ impl Prg {
     }
 }
 
+/// Pseudo random generator used to derive cryptographic keys.
+/// See `Prg` for more details of the PRG evaluation.
+pub struct KeyDerivationPrg<KeyType: Key> {
+    prg: Prg,
+    _marker: std::marker::PhantomData<*const KeyType>,
+}
+
+impl<KeyType: Key> Zeroize for KeyDerivationPrg<KeyType> {
+    fn zeroize(&mut self) {
+        self.prg.zeroize();
+    }
+}
+
+impl<KeyType: Key> Drop for KeyDerivationPrg<KeyType> {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl<KeyType: Key> KeyDerivationPrg<KeyType> {
+    /// Construct a PRG intended for key derivation from a 256 bits key
+    pub fn from_key(key: Key256) -> Self {
+        Self {
+            prg: Prg::from_key(key),
+            _marker: std::marker::PhantomData,
+        }
+    }
+
+    /// Construct a PRG intended for key derivation from a new random key
+    #[allow(clippy::new_without_default)] // This is done on purpose to avoid
+                                          // involuntary creation of a PRG with
+                                          // a random key
+    pub fn new() -> Self {
+        Self {
+            prg: Prg::new(),
+            _marker: std::marker::PhantomData,
+        }
+    }
+
+    /// Derive a new key using the PRG. Modifying `key_index` parameter
+    /// generates keys that are computationally pair-wise independent
+    pub fn derive_key(&self, key_index: u32) -> KeyType {
+        let offset = (key_index as usize) * KeyType::KEY_SIZE;
+        // cannot use an array in the following line :(
+        // use a vector instead until const generics for arrays are standardized
+        // (in a way that fits us)
+        let mut buf = vec![0u8; KeyType::KEY_SIZE];
+        self.prg.fill_offset_pseudo_random_bytes(offset, &mut buf);
+
+        return KeyType::from_slice(&mut buf[..]);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -115,5 +168,29 @@ mod tests {
         for offset in 0..1025 {
             assert!(test_offset_correctness(offset, TEST_BUF_LEN), "Full and offset PRG generation do not match for offset {} and buffer length {}",offset, TEST_BUF_LEN);
         }
+    }
+
+    fn key_derivation<KeyType: Key + KeyAccessor>() {
+        for key_index in 0..300u32 {
+            let k = Key256::new();
+            let k_dup = k.insecure_duplicate();
+
+            let prg = Prg::from_key(k);
+            let derivation_prg = KeyDerivationPrg::<KeyType>::from_key(k_dup);
+
+            let mut buf = vec![0u8; KeyType::KEY_SIZE];
+            prg.fill_offset_pseudo_random_bytes(
+                (key_index as usize) * KeyType::KEY_SIZE,
+                &mut buf,
+            );
+            let k_deriv = derivation_prg.derive_key(key_index);
+
+            assert!(k_deriv.content() == buf);
+        }
+    }
+
+    #[test]
+    fn key_derivation_256() {
+        key_derivation::<Key256>();
     }
 }
