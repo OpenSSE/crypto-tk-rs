@@ -106,7 +106,7 @@ impl Prg {
 /// See `Prg` for more details of the PRG evaluation.
 pub struct KeyDerivationPrg<KeyType: Key> {
     prg: Prg,
-    _marker: std::marker::PhantomData<*const KeyType>,
+    _marker: std::marker::PhantomData<KeyType>,
 }
 
 impl<KeyType: Key> Zeroize for KeyDerivationPrg<KeyType> {
