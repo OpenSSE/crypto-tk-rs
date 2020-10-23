@@ -8,6 +8,9 @@ use chacha20::ChaCha20;
 use clear_on_drop::clear_stack_on_return;
 use zeroize::Zeroize;
 
+use std::ops::Range;
+use std::vec::Vec;
+
 /// Pseudo random generator.
 ///
 /// ## Evaluation algorithm
@@ -150,6 +153,45 @@ impl<KeyType: Key> KeyDerivationPrg<KeyType> {
 
         return KeyType::from_slice(&mut buf[..]);
     }
+
+    /// Derive a sequence of new keys using the PRG such that their key_index
+    /// is in the `indexes` range. The keys in the output are sorted by
+    /// increasing index.
+    pub fn derive_keys(&self, indexes: Range<u32>) -> Vec<KeyType> {
+        let index_width = indexes.len();
+
+        let mut res = Vec::<KeyType>::new();
+        res.reserve(index_width);
+
+        let mut buf = vec![0u8; (index_width as usize) * KeyType::KEY_SIZE];
+        let offset = (indexes.start as usize) * KeyType::KEY_SIZE;
+
+        self.prg.fill_offset_pseudo_random_bytes(offset, &mut buf);
+
+        for i in 0..index_width {
+            let range_begin = (i as usize) * KeyType::KEY_SIZE;
+            let range_end = (i + 1 as usize) * KeyType::KEY_SIZE;
+            res.push(KeyType::from_slice(&mut buf[range_begin..range_end]));
+        }
+
+        res
+    }
+
+    /// Derive a pair of new keys using the PRG. The returned pair of keys
+    /// `(k1,k2) have index `key_index` and `key_index+1` respectively.
+    pub fn derive_key_pair(&self, key_index: u32) -> (KeyType, KeyType) {
+        let mut buf = vec![0u8; 2 * KeyType::KEY_SIZE];
+
+        self.prg.fill_offset_pseudo_random_bytes(
+            key_index as usize * KeyType::KEY_SIZE,
+            &mut buf,
+        );
+
+        return (
+            KeyType::from_slice(&mut buf[..KeyType::KEY_SIZE]),
+            KeyType::from_slice(&mut buf[KeyType::KEY_SIZE..]),
+        );
+    }
 }
 
 #[cfg(test)]
@@ -176,13 +218,15 @@ mod tests {
     }
 
     fn key_derivation<KeyType: Key + KeyAccessor>() {
-        for key_index in 0..300u32 {
-            let k = Key256::new();
-            let k_dup = k.insecure_duplicate();
+        let k = Key256::new();
+        let k_dup = k.insecure_duplicate();
+        let prg = Prg::from_key(k);
+        let derivation_prg = KeyDerivationPrg::<KeyType>::from_key(k_dup);
 
-            let prg = Prg::from_key(k);
-            let derivation_prg = KeyDerivationPrg::<KeyType>::from_key(k_dup);
+        let key_range = 0..300u32;
+        let seq_keys = derivation_prg.derive_keys(key_range.clone());
 
+        for key_index in key_range {
             let mut buf = vec![0u8; KeyType::KEY_SIZE];
             prg.fill_offset_pseudo_random_bytes(
                 (key_index as usize) * KeyType::KEY_SIZE,
@@ -191,11 +235,35 @@ mod tests {
             let k_deriv = derivation_prg.derive_key(key_index);
 
             assert!(k_deriv.content() == buf);
+            assert_eq!(seq_keys[key_index as usize].content(), buf);
+        }
+    }
+
+    fn key_pairs<KeyType: Key + KeyAccessor>() {
+        let key_range = 0..300u32;
+
+        for key_index in key_range {
+            let k = Key256::new();
+            let k_dup = k.insecure_duplicate();
+            let prg = Prg::from_key(k);
+            let derivation_prg = KeyDerivationPrg::<KeyType>::from_key(k_dup);
+
+            let mut buf = vec![0u8; 2 * KeyType::KEY_SIZE];
+            prg.fill_offset_pseudo_random_bytes(
+                (key_index as usize) * KeyType::KEY_SIZE,
+                &mut buf,
+            );
+            let (k_deriv_1, k_deriv_2) =
+                derivation_prg.derive_key_pair(key_index);
+
+            assert_eq!(k_deriv_1.content(), &buf[..KeyType::KEY_SIZE]);
+            assert_eq!(k_deriv_2.content(), &buf[KeyType::KEY_SIZE..]);
         }
     }
 
     #[test]
     fn key_derivation_256() {
         key_derivation::<Key256>();
+        key_pairs::<Key256>();
     }
 }
