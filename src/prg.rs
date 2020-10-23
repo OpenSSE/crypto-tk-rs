@@ -18,6 +18,11 @@ use zeroize::Zeroize;
 /// be used to fill a buffer with pseudo random bytes, or to derive keys
 /// (although, generally speaking, a PRF a is preferred in that case, to avoid
 /// security errors).
+/// The interest of using a PRG instead of the PRF might be efficiency: the PRG
+/// implementation is twice as fast as the PRF one. This is to be expected as
+/// the PRF uses a hash function, a primitive that is way more complicated than
+/// a block cipher or a stream cipher. For the actual difference on your
+/// platform, run `cargo bench`.
 ///
 ///
 #[derive(Zeroize)]
