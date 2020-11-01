@@ -175,7 +175,62 @@ impl RCPrfRange {
     }
 }
 
-    pub fn contains(&self, r: &RCPrfRange) -> bool {
-        (r.range.start >= self.range.start) && (r.range.end <= self.range.end)
+struct ConstrainedRCPrfInnerElement {
+    prg: KeyDerivationPrg<Key256>,
+    node_depth: u8,
+    rcprf_height: u8,
+}
+
+struct ConstrainedRCPrfLeafElement {
+    prg: Prg,
+    range: RCPrfRange,
+}
+
+pub struct RCPrf {
+    root: ConstrainedRCPrfInnerElement,
+    rcprf_height: u8,
+    range: RCPrfRange,
+}
+
+pub struct ConstrainedRCPrf {
+    elements: Vec<Box<dyn RCPrfElement>>,
+}
+
+pub trait RangePrf {
+    fn range(&self) -> RCPrfRange;
+    fn eval(&self, leaf: u64, output: &mut [u8]) -> Result<(), String>;
+    fn eval_range(
+        &self,
+        range: &RCPrfRange,
+        out_vec: &Vec<&mut [u8]>,
+    ) -> Result<(), String>;
+
+    fn constrain(&self, range: &RCPrfRange)
+        -> Result<ConstrainedRCPrf, String>;
+}
+
+pub trait TreeBasedPrf {
+    fn tree_height(&self) -> u8;
+}
+
+trait RCPrfElement: TreeBasedPrf {
+    fn is_leaf(&self) -> bool;
+    fn height(&self) -> u8;
+}
+
+fn get_child_node(
+    range_prf: &dyn TreeBasedPrf,
+    leaf: u64,
+    node_depth: u8,
+) -> RCPrfTreeNodeChild {
+    // the -2 term comes from two facts:
+    // - the minimum valid tree height is 1 (single note)
+    // - the maximum depth of a node is tree_height-1
+    let mask = 1u64 << (range_prf.tree_height() - node_depth - 2);
+
+    if (leaf & mask) == 0 {
+        RCPrfTreeNodeChild::LeftChild
+    } else {
+        RCPrfTreeNodeChild::RightChild
     }
 }
