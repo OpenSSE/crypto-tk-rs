@@ -1,10 +1,13 @@
 //! Range-constrained PRF
 
 use crate::key::{Key, Key256, KeyAccessor};
-use crate::prf::Prf;
+use crate::prg::{KeyDerivationPrg, Prg};
 
 use clear_on_drop::clear::Clear;
 use zeroize::Zeroize;
+
+use std::ops::Bound::*;
+use std::ops::{Bound, RangeBounds};
 
 /// Range-constrained pseudo-random functions
 ///
@@ -48,7 +51,46 @@ impl From<std::ops::Range<u64>> for RCPrfRange {
         RCPrfRange { range }
     }
 }
+
+impl RangeBounds<u64> for RCPrfRange {
+    fn start_bound(&self) -> Bound<&u64> {
+        self.range.start_bound()
+    }
+
+    fn end_bound(&self) -> Bound<&u64> {
+        self.range.end_bound()
+    }
+}
+
 impl RCPrfRange {
+    /// Returns the minimum value in the range
+    ///
+    /// # Example
+    /// ```
+    /// # extern crate crypto_tk_rs;
+    /// use crypto_tk_rs::RCPrfRange;
+    /// let range = RCPrfRange::from(4..7);
+    /// assert_eq!(range.min(), 4);
+    /// ```
+    ///
+    pub fn min(&self) -> u64 {
+        self.range.start
+    }
+
+    /// Returns the maximum value in the range
+    ///
+    /// # Example
+    /// ```
+    /// # extern crate crypto_tk_rs;
+    /// use crypto_tk_rs::RCPrfRange;
+    /// let range = RCPrfRange::from(4..7);
+    /// assert_eq!(range.max(), 6);
+    /// ```
+    ///
+    pub fn max(&self) -> u64 {
+        self.range.end - 1
+    }
+
     /// Returns `true` if the range contains `leaf`
     ///
     /// # Example
@@ -56,11 +98,11 @@ impl RCPrfRange {
     /// # extern crate crypto_tk_rs;
     /// use crypto_tk_rs::RCPrfRange;
     /// let range = RCPrfRange::from(4..7);
-    /// # assert!(!range.contains_leaf(3));
-    /// # assert!(range.contains_leaf(4));
-    /// # assert!(range.contains_leaf(5));
-    /// # assert!(range.contains_leaf(6));
-    /// # assert!(!range.contains_leaf(7));
+    /// assert!(!range.contains_leaf(3));
+    /// assert!(range.contains_leaf(4));
+    /// assert!(range.contains_leaf(5));
+    /// assert!(range.contains_leaf(6));
+    /// assert!(!range.contains_leaf(7));
     /// ```
     pub fn contains_leaf(&self, leaf: u64) -> bool {
         (leaf >= self.range.start) && (leaf < self.range.end)
@@ -73,33 +115,29 @@ impl RCPrfRange {
     /// # extern crate crypto_tk_rs;
     /// use crypto_tk_rs::RCPrfRange;
     /// let range = RCPrfRange::from(4..7);
-    /// # assert!(!range.intersects(&RCPrfRange::from(2..3)));
-    /// # assert!(!range.intersects(&RCPrfRange::from(2..4)));
-    /// # assert!(range.intersects(&RCPrfRange::from(2..5)));
-    /// # assert!(range.intersects(&RCPrfRange::from(5..6)));
-    /// # assert!(range.intersects(&RCPrfRange::from(6..8)));
-    /// # assert!(!range.intersects(&RCPrfRange::from(7..8)));
+    /// assert!(!range.intersects(&(2..3)));
+    /// assert!(!range.intersects(&RCPrfRange::from(2..4)));
+    /// assert!(range.intersects(&RCPrfRange::from(2..5)));
+    /// assert!(range.intersects(&RCPrfRange::from(5..6)));
+    /// assert!(range.intersects(&RCPrfRange::from(6..8)));
+    /// assert!(!range.intersects(&RCPrfRange::from(7..8)));
+    /// assert!(!range.intersects(&RCPrfRange::from(9..10)));
     /// ```
-    pub fn intersects(&self, r: &RCPrfRange) -> bool {
-        (self.range.start < r.range.end) && (r.range.start < self.range.end)
-    }
-
-    /// Returns `true` if the two ranges intersect
-    ///
-    /// # Example
-    /// ```
-    /// # extern crate crypto_tk_rs;
-    /// use crypto_tk_rs::RCPrfRange;
-    /// let range = RCPrfRange::from(4..7);
-    /// assert!(!range.intersects_range(&(2..3)));
-    /// assert!(!range.intersects_range(&(2..4)));
-    /// assert!(range.intersects_range(&(2..5)));
-    /// assert!(range.intersects_range(&(5..6)));
-    /// assert!(range.intersects_range(&(6..8)));
-    /// assert!(!range.intersects_range(&(7..8)));
-    /// ```
-    pub fn intersects_range(&self, r: &std::ops::Range<u64>) -> bool {
-        (self.range.start < r.end) && (r.start < self.range.end)
+    pub fn intersects<R>(&self, r: &R) -> bool
+    where
+        R: RangeBounds<u64>,
+    {
+        let start = match r.start_bound() {
+            Unbounded => 0,
+            Included(&a) => a,
+            Excluded(&a) => a + 1,
+        };
+        let end = match r.end_bound() {
+            Unbounded => u64::max_value(),
+            Included(&a) => a + 1,
+            Excluded(&a) => a,
+        };
+        (self.range.start < end) && (start < self.range.end)
     }
 
     /// Returns `true` if `r` is contained in the range
@@ -109,14 +147,34 @@ impl RCPrfRange {
     /// # extern crate crypto_tk_rs;
     /// use crypto_tk_rs::RCPrfRange;
     /// let range = RCPrfRange::from(4..7);
-    /// # assert!(!range.contains(&RCPrfRange::from(2..3)));
-    /// # assert!(!range.contains(&RCPrfRange::from(2..4)));
-    /// # assert!(range.contains(&RCPrfRange::from(5..6)));
-    /// # assert!(range.contains(&RCPrfRange::from(5..7)));
-    /// # assert!(range.contains(&RCPrfRange::from(4..6)));
-    /// # assert!(range.contains(&RCPrfRange::from(4..7)));
-    /// # assert!(!range.contains(&RCPrfRange::from(5..8)));
+    /// assert!(!range.contains_range(&RCPrfRange::from(2..3)));
+    /// assert!(!range.contains_range(&(2..4)));
+    /// assert!(range.contains_range(&(5..6)));
+    /// assert!(range.contains_range(&(5..7)));
+    /// assert!(range.contains_range(&(4..6)));
+    /// assert!(range.contains_range(&(4..7)));
+    /// assert!(!range.contains_range(&(5..8)));
+    /// assert!(!range.contains_range(&(..6)));
+    /// assert!(!range.contains_range(&(6..)));
     /// ```
+    pub fn contains_range<R>(&self, r: &R) -> bool
+    where
+        R: RangeBounds<u64>,
+    {
+        let start: u64 = match r.start_bound() {
+            Unbounded => 0,
+            Included(&a) => a,
+            Excluded(&a) => a + 1,
+        };
+        let end: u64 = match r.end_bound() {
+            Unbounded => u64::max_value(),
+            Included(&a) => a + 1,
+            Excluded(&a) => a,
+        };
+        (start >= self.range.start) && (end <= self.range.end)
+    }
+}
+
     pub fn contains(&self, r: &RCPrfRange) -> bool {
         (r.range.start >= self.range.start) && (r.range.end <= self.range.end)
     }
