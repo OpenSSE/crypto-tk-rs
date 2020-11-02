@@ -26,8 +26,6 @@ enum RCPrfTreeNodeChild {
     RightChild = 1,
 }
 
-const KEY_SIZE: u8 = 32u8;
-
 /// Maximum tree height of a RCPRF tree
 pub const MAX_HEIGHT: u8 = 65;
 
@@ -229,28 +227,46 @@ struct ConstrainedRCPrfLevel1Element {
     rcprf_height: u8,
 }
 
+/// An *unconstrained* RCPrf object
 pub struct RCPrf {
     root: ConstrainedRCPrfInnerElement,
 }
 
+/// A *constrained* RCPrf object (obtained after constraining a RCPrf - constrained or not)
 pub struct ConstrainedRCPrf {
     elements: Vec<Box<dyn RCPrfElement>>,
 }
 
+/// Trait representing a PRF that can be evaluated on an integral range
 pub trait RangePrf {
+    /// Returns the range on which the PRF can be evaluated
     fn range(&self) -> RCPrfRange;
-    fn eval(&self, leaf: u64, output: &mut [u8]) -> Result<(), String>;
+
+    /// Evaluate the PRF on the input `x` and put the result in `output`.
+    /// Returns an error when the input is out of the PRF range.
+    fn eval(&self, x: u64, output: &mut [u8]) -> Result<(), String>;
+
+    /// Evaluate the PRF on every value of the `range` and put the result in
+    /// `outputs` such that the i-th value of the range is put at the i-th
+    /// position of the output.
+    /// Returns an error when `range` is not contained in the PRF's range.
     fn eval_range(
         &self,
         range: &RCPrfRange,
         outputs: &mut [&mut [u8]],
     ) -> Result<(), String>;
 
+    /// Constrain the PRF on `range`.
+    /// Returns an error if `range` does not intersect the PRF's range
     fn constrain(&self, range: &RCPrfRange)
         -> Result<ConstrainedRCPrf, String>;
 }
 
+/// Trait representing a PRF built on a tree structure
 pub trait TreeBasedPrf {
+    /// Returns the height of the underlying tree of the PRF.
+    /// For range constrained PRFs, this stays the same when constraining the
+    /// PRF.
     fn tree_height(&self) -> u8;
 }
 
@@ -477,6 +493,8 @@ impl RangePrf for RCPrf {
 }
 
 impl RCPrf {
+    /// Returns a new RCPrf based on a tree of height `height`, with a random
+    /// root.
     pub fn new(height: u8) -> Self {
         RCPrf {
             root: ConstrainedRCPrfInnerElement {
