@@ -151,7 +151,7 @@ impl<KeyType: Key> KeyDerivationPrg<KeyType> {
         let mut buf = vec![0u8; KeyType::KEY_SIZE];
         self.prg.fill_offset_pseudo_random_bytes(offset, &mut buf);
 
-        return KeyType::from_slice(&mut buf[..]);
+        KeyType::from_slice(&mut buf[..])
     }
 
     /// Derive a sequence of new keys using the PRG such that their key_index
@@ -187,10 +187,10 @@ impl<KeyType: Key> KeyDerivationPrg<KeyType> {
             &mut buf,
         );
 
-        return (
+        (
             KeyType::from_slice(&mut buf[..KeyType::KEY_SIZE]),
             KeyType::from_slice(&mut buf[KeyType::KEY_SIZE..]),
-        );
+        )
     }
 }
 

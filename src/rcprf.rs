@@ -37,8 +37,7 @@ pub const fn max_leaf_index(height: u8) -> u64 {
     if height >= MAX_HEIGHT {
         return 0xFFFFFFFFFFFFFFFF;
     }
-    return (1u64 << (height - 1)) - 1;
-    // max_leaf_index_generic(height);
+    (1u64 << (height - 1)) - 1
 }
 
 /// Structure encoding the domain of a range-constrained PRF.
@@ -166,8 +165,7 @@ impl RCPrfRange {
         let cond2: bool = match r.end_bound() {
             Unbounded => true,
             Included(&a) => self.min() <= a,
-            Excluded(&0) => false,
-            Excluded(&a) => self.min() <= a - 1,
+            Excluded(&a) => self.min() < a,
         };
 
         cond1 && cond2
