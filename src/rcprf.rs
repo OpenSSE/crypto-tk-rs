@@ -304,6 +304,14 @@ impl RangePrf for ConstrainedRCPrfLevel1Element {
                 leaf,
                 self.tree_height() - self.subtree_height(),
             );
+
+            println!(
+                "Last {}",
+                match child {
+                    RCPrfTreeNodeChild::LeftChild => "Left (0)",
+                    _ => "Right (1)",
+                }
+            );
             self.prf.fill_bytes(&[child as u8], output);
             Ok(())
         }
@@ -376,14 +384,28 @@ impl RangePrf for ConstrainedRCPrfInnerElement {
             );
 
             let half_width = 1u64 << (self.subtree_height() - 2);
+            println!("Half width {}", half_width);
             let submin = self.range.min() + (child as u64) * half_width;
             let submax = submin + half_width;
-            let r = RCPrfRange::from(submin..=submax);
+            let r = RCPrfRange::from(submin..submax);
 
-            debug_assert!(self.range().contains_range(&r));
+            debug_assert!(
+                self.range().contains_range(&r),
+                "{} {}",
+                self.range,
+                r
+            );
             debug_assert_eq!(self.range().width() / 2, half_width);
 
             let subkey = self.prg.derive_key(child as u32);
+
+            println!(
+                "{}",
+                match child {
+                    RCPrfTreeNodeChild::LeftChild => "Left (0)",
+                    _ => "Right (1)",
+                }
+            );
 
             if self.subtree_height > 3 {
                 let child_node = ConstrainedRCPrfInnerElement {
@@ -472,10 +494,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn rcprf() {
+    fn rcprf() -> Result<(), String> {
         let rcprf = RCPrf::new(8);
 
         let mut output = [0u8; 16];
-        rcprf.eval(10, &mut output);
+        rcprf.eval(127, &mut output)
     }
 }
