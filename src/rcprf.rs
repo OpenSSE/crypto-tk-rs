@@ -40,6 +40,24 @@ pub const fn max_leaf_index(height: u8) -> u64 {
     (1u64 << (height - 1)) - 1
 }
 
+fn get_child_node(
+    height: u8,
+    leaf_index: u64,
+    node_depth: u8,
+) -> RCPrfTreeNodeChild {
+    debug_assert!(height >= node_depth + 2);
+    // the -2 term comes from two facts:
+    // - the minimum valid tree height is 1 (single node)
+    // - the maximum depth of a node is tree_height-1
+    let mask = 1u64 << (height - node_depth - 2);
+
+    if (leaf_index & mask) == 0 {
+        RCPrfTreeNodeChild::LeftChild
+    } else {
+        RCPrfTreeNodeChild::RightChild
+    }
+}
+
 /// Structure encoding the domain of a range-constrained PRF.
 #[derive(Clone, Debug)]
 pub struct RCPrfRange {
@@ -273,16 +291,7 @@ trait RCPrfElement: TreeBasedPrf {
     fn subtree_height(&self) -> u8;
 
     fn get_child_node(&self, leaf: u64, node_depth: u8) -> RCPrfTreeNodeChild {
-        // the -2 term comes from two facts:
-        // - the minimum valid tree height is 1 (single note)
-        // - the maximum depth of a node is tree_height-1
-        let mask = 1u64 << (self.tree_height() - node_depth - 2);
-
-        if (leaf & mask) == 0 {
-            RCPrfTreeNodeChild::LeftChild
-        } else {
-            RCPrfTreeNodeChild::RightChild
-        }
+        get_child_node(self.tree_height(), leaf, node_depth)
     }
 }
 
@@ -398,6 +407,7 @@ impl RangePrf for ConstrainedRCPrfInnerElement {
             );
 
             let half_width = 1u64 << (self.subtree_height() - 2);
+            println!("Subtree height {}", self.subtree_height());
             println!("Half width {}", half_width);
             let submin = self.range.min() + (child as u64) * half_width;
             let submax = submin + half_width;
@@ -515,5 +525,19 @@ mod tests {
 
         let mut output = [0u8; 16];
         rcprf.eval(127, &mut output)
+    }
+
+    #[test]
+    fn child_choice() {
+        let height = 10;
+
+        for leaf in 0..max_leaf_index(height) {
+            let mut acc = 0u64;
+            for d in 0..height - 1 {
+                let child = get_child_node(height, leaf, d);
+                acc = (acc << 1) | (child as u64);
+            }
+            assert_eq!(leaf, acc);
+        }
     }
 }
