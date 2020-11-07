@@ -472,7 +472,11 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
         range: &RCPrfRange,
         outputs: &mut [&mut [u8]],
     ) -> Result<(), String> {
-        todo!()
+        range
+            .clone()
+            .range
+            .zip(outputs)
+            .try_for_each(|(i, out)| self.unchecked_eval(i, out))
     }
 }
 impl RangePrf for ConstrainedRCPrfInnerElement {
@@ -550,45 +554,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn rcprf() -> Result<(), String> {
-        let rcprf = RCPrf::new(8)?;
-
-        let mut output = [0u8; 16];
-        rcprf.eval(127, &mut output)
-    }
-
-    #[test]
-    fn rcprf_errors() {
-        assert!(!RCPrf::new(MAX_HEIGHT + 1).is_ok());
-
-        let h = 8u8;
-        let rcprf = RCPrf::new(h).unwrap();
-        let mut output = [0u8; 16];
-        assert!(!rcprf.eval(max_leaf_index(h) + 1, &mut output).is_ok());
-
-        const out_vec_size: usize = 8;
-        let mut outs = vec![[0u8; 16]; out_vec_size];
-        let mut slice: Vec<&mut [u8]> =
-            outs.iter_mut().map(|x| &mut x[..]).collect();
-
-        // out of range error
-        assert!(!rcprf
-            .eval_range(
-                &RCPrfRange::from(
-                    max_leaf_index(h)
-                        ..(max_leaf_index(h) + out_vec_size as u64)
-                ),
-                &mut slice
-            )
-            .is_ok());
-
-        // invalid vector size
-        assert!(!rcprf
-            .eval_range(&RCPrfRange::from(2..3), &mut slice)
-            .is_ok());
-    }
-
-    #[test]
     fn child_choice() {
         let height = 10;
 
@@ -600,5 +565,76 @@ mod tests {
             }
             assert_eq!(leaf, acc);
         }
+    }
+
+    #[test]
+    fn rcprf_consistency() {
+        let h = 6u8;
+
+        let rcprf = RCPrf::new(h).unwrap();
+
+        let direct_eval: Vec<[u8; 16]> = (0..=max_leaf_index(h))
+            .map(|x| {
+                let mut out = [0u8; 16];
+
+                rcprf.eval(x, &mut out).unwrap();
+                out
+            })
+            .collect();
+
+        let mut outs = vec![[0u8; 16]; max_leaf_index(h) as usize + 1];
+        let mut slice: Vec<&mut [u8]> =
+            outs.iter_mut().map(|x| &mut x[..]).collect();
+
+        // iterate over all the possible ranges
+        for start in 0..=max_leaf_index(h) {
+            for end in start..=max_leaf_index(h) {
+                let range_width = (end - start + 1) as usize;
+                rcprf
+                    .eval_range(
+                        &RCPrfRange::from(start..=end),
+                        &mut slice[0..range_width],
+                    )
+                    .unwrap();
+
+                let couple = direct_eval
+                    .iter()
+                    .skip(start as usize)
+                    .take(range_width)
+                    .zip(slice.iter());
+                couple.for_each(|(x, y)| assert_eq!(x, y));
+            }
+        }
+    }
+
+    #[test]
+    fn rcprf_errors() {
+        assert!(!RCPrf::new(MAX_HEIGHT + 1).is_ok());
+
+        let h = 8u8;
+        let rcprf = RCPrf::new(h).unwrap();
+        let mut output = [0u8; 16];
+        assert!(!rcprf.eval(max_leaf_index(h) + 1, &mut output).is_ok());
+
+        const OUT_VEC_SIZE: usize = 8;
+        let mut outs = vec![[0u8; 16]; OUT_VEC_SIZE];
+        let mut slice: Vec<&mut [u8]> =
+            outs.iter_mut().map(|x| &mut x[..]).collect();
+
+        // out of range error
+        assert!(!rcprf
+            .eval_range(
+                &RCPrfRange::from(
+                    max_leaf_index(h)
+                        ..(max_leaf_index(h) + OUT_VEC_SIZE as u64)
+                ),
+                &mut slice
+            )
+            .is_ok());
+
+        // invalid vector size
+        assert!(!rcprf
+            .eval_range(&RCPrfRange::from(2..3), &mut slice)
+            .is_ok());
     }
 }
