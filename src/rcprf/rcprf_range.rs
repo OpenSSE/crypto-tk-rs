@@ -38,6 +38,12 @@ impl std::fmt::Display for RCPrfRange {
 }
 
 impl RCPrfRange {
+    /// Creates a new range spanning from `min` to `max` (included).
+    ///
+    pub fn new(min: u64, max: u64) -> Self {
+        RCPrfRange { range: (min..=max) }
+    }
+
     /// Returns the minimum value in the range
     ///
     /// # Example
