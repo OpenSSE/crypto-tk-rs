@@ -560,7 +560,7 @@ impl RangePrf for ConstrainedRCPrf {
     fn range(&self) -> RCPrfRange {
         RCPrfRange::new(
             self.elements[0].range().min(),
-            self.elements[self.elements.len() - 1].range().min(),
+            self.elements[self.elements.len() - 1].range().max(),
         )
     }
 }
