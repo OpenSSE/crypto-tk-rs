@@ -340,62 +340,83 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
             });
         }
 
-        let half_width = 1u64 << (self.subtree_height() - 2);
-        let left_range = RCPrfRange::new(
-            self.range().min(),
-            self.range().min() + half_width - 1,
-        );
-        let right_range = RCPrfRange::new(
-            self.range().min() + half_width,
-            self.range().max(),
-        );
+        if self.subtree_height() > 2 {
+            let half_width = 1u64 << (self.subtree_height() - 2);
+            let left_range = RCPrfRange::new(
+                self.range().min(),
+                self.range().min() + half_width - 1,
+            );
+            let right_range = RCPrfRange::new(
+                self.range().min() + half_width,
+                self.range().max(),
+            );
 
-        let left_constrained = match left_range.intersection(range) {
-            None => None,
-            Some(subrange) => {
-                let subkey = self.prg.derive_key(0);
+            let left_constrained = match left_range.intersection(range) {
+                None => None,
+                Some(subrange) => {
+                    let subkey = self.prg.derive_key(0);
 
-                let left_child = ConstrainedRCPrfInnerElement {
-                    prg: KeyDerivationPrg::from_key(subkey),
-                    range: left_range,
-                    subtree_height: self.subtree_height() - 1,
-                    rcprf_height: self.rcprf_height,
-                };
-                Some(left_child.unchecked_constrain(&subrange).unwrap())
-            }
-        };
+                    let left_child = ConstrainedRCPrfInnerElement {
+                        prg: KeyDerivationPrg::from_key(subkey),
+                        range: left_range,
+                        subtree_height: self.subtree_height() - 1,
+                        rcprf_height: self.rcprf_height,
+                    };
+                    Some(left_child.unchecked_constrain(&subrange).unwrap())
+                }
+            };
 
-        let right_constrained = match right_range.intersection(range) {
-            None => None,
-            Some(subrange) => {
-                let subkey = self.prg.derive_key(1);
+            let right_constrained = match right_range.intersection(range) {
+                None => None,
+                Some(subrange) => {
+                    let subkey = self.prg.derive_key(1);
 
-                let right_child = ConstrainedRCPrfInnerElement {
-                    prg: KeyDerivationPrg::from_key(subkey),
-                    range: right_range,
-                    subtree_height: self.subtree_height() - 1,
-                    rcprf_height: self.rcprf_height,
-                };
-                Some(right_child.unchecked_constrain(&subrange).unwrap())
-            }
-        };
+                    let right_child = ConstrainedRCPrfInnerElement {
+                        prg: KeyDerivationPrg::from_key(subkey),
+                        range: right_range,
+                        subtree_height: self.subtree_height() - 1,
+                        rcprf_height: self.rcprf_height,
+                    };
+                    Some(right_child.unchecked_constrain(&subrange).unwrap())
+                }
+            };
 
-        match (left_constrained, right_constrained) {
-            (None, None) => Err(format!(
-                "Error when constraining element of range {} on {}. Invalid
+            match (left_constrained, right_constrained) {
+                (None, None) => Err(format!(
+                    "Error when constraining element of range {} on {}. Invalid
                 constrain.",
-                self.range(),
-                range
-            )),
-            (None, Some(constrained_rcprf)) => Ok(constrained_rcprf),
-            (Some(constrained_rcprf), None) => Ok(constrained_rcprf),
-            (
-                Some(mut constrained_rcprf_left),
-                Some(constrained_rcprf_right),
-            ) => {
-                constrained_rcprf_left.merge(constrained_rcprf_right)?;
-                Ok(constrained_rcprf_left)
+                    self.range(),
+                    range
+                )),
+                (None, Some(constrained_rcprf)) => Ok(constrained_rcprf),
+                (Some(constrained_rcprf), None) => Ok(constrained_rcprf),
+                (
+                    Some(mut constrained_rcprf_left),
+                    Some(constrained_rcprf_right),
+                ) => {
+                    constrained_rcprf_left.merge(constrained_rcprf_right)?;
+                    Ok(constrained_rcprf_left)
+                }
             }
+        } else {
+            // we have to return a leaf: the constraining range is not the full
+            // range, and we are at height 2
+            debug_assert_eq!(range.width(), 1);
+            let child = self.get_child_node(
+                range.min(),
+                self.tree_height() - self.subtree_height(),
+            );
+            let subkey = self.prg.derive_key(child as u32);
+
+            let child_node = ConstrainedRCPrfLeafElement {
+                prf: Prf::from_key(subkey),
+                index: range.min(),
+                rcprf_height: self.rcprf_height,
+            };
+
+            Ok(ConstrainedRCPrf {
+                elements: vec![Box::new(child_node)],
+            })
         }
     }
 }
