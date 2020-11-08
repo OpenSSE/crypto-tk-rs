@@ -22,6 +22,8 @@
 // #[cfg(all(test, feature = "with-bench"))]
 // extern crate test;
 
+mod insecure_clone;
+
 pub mod key;
 pub mod prf;
 pub mod prg;

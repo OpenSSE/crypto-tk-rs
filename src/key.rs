@@ -1,10 +1,12 @@
 //! Secret Keys
 
+use crate::insecure_clone::private::InsecureClone;
+
 use rand::prelude::*;
 use zeroize::Zeroize;
 
 /// Wrapper trait for key material
-pub trait Key {
+pub trait Key: InsecureClone {
     /// Size of the key in bytes
     const KEY_SIZE: usize;
 
@@ -45,12 +47,6 @@ pub trait Key {
     /// # assert_eq!(buf[..], [0u8; 32]);
     /// ```
     fn from_slice(bytes: &mut [u8]) -> Self;
-
-    /// Duplicates the key.
-    /// Would be similar to `clone()`, except we want to make sure that the user knows this leads to security issues.
-    /// This function is only available in `test` mode (it should not be used in production code).
-    #[cfg(test)]
-    fn insecure_duplicate(&self) -> Self;
 }
 
 pub(crate) trait KeyAccessor {
@@ -114,9 +110,10 @@ impl Key for Key256 {
 
         k
     }
+}
 
-    #[cfg(test)]
-    fn insecure_duplicate(&self) -> Self {
+impl InsecureClone for Key256 {
+    fn insecure_clone(&self) -> Self {
         return Self {
             content: self.content.clone(),
         };
@@ -154,7 +151,7 @@ mod tests {
         assert_eq!(k1.content, buf_copy_1);
         assert_eq!(k2.content, buf_copy_1);
 
-        assert_eq!(k1.content, k1.insecure_duplicate().content);
+        assert_eq!(k1.content, k1.insecure_clone().content);
 
         // check that the buffer we built the key from has been cleared
         assert_eq!(buf, [0u8; 32]);

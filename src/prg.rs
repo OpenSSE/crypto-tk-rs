@@ -1,6 +1,8 @@
 //! Pseudo-random generator
 
+use crate::insecure_clone::private::InsecureClone;
 use crate::key::{Key, Key256, KeyAccessor};
+
 use chacha20::cipher::{
     NewStreamCipher, SyncStreamCipher, SyncStreamCipherSeek,
 };
@@ -102,6 +104,14 @@ impl Prg {
     }
 }
 
+impl InsecureClone for Prg {
+    fn insecure_clone(&self) -> Self {
+        Prg {
+            key: self.key.insecure_clone(),
+        }
+    }
+}
+
 /// Pseudo random generator used to derive cryptographic keys.
 /// See `Prg` for more details of the PRG evaluation.
 pub struct KeyDerivationPrg<KeyType: Key> {
@@ -118,6 +128,15 @@ impl<KeyType: Key> Zeroize for KeyDerivationPrg<KeyType> {
 impl<KeyType: Key> Drop for KeyDerivationPrg<KeyType> {
     fn drop(&mut self) {
         self.zeroize();
+    }
+}
+
+impl<KeyType: Key> InsecureClone for KeyDerivationPrg<KeyType> {
+    fn insecure_clone(&self) -> Self {
+        KeyDerivationPrg::<KeyType> {
+            prg: self.prg.insecure_clone(),
+            _marker: std::marker::PhantomData,
+        }
     }
 }
 
@@ -219,7 +238,7 @@ mod tests {
 
     fn key_derivation<KeyType: Key + KeyAccessor>() {
         let k = Key256::new();
-        let k_dup = k.insecure_duplicate();
+        let k_dup = k.insecure_clone();
         let prg = Prg::from_key(k);
         let derivation_prg = KeyDerivationPrg::<KeyType>::from_key(k_dup);
 
@@ -244,7 +263,7 @@ mod tests {
 
         for key_index in key_range {
             let k = Key256::new();
-            let k_dup = k.insecure_duplicate();
+            let k_dup = k.insecure_clone();
             let prg = Prg::from_key(k);
             let derivation_prg = KeyDerivationPrg::<KeyType>::from_key(k_dup);
 

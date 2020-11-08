@@ -1,5 +1,6 @@
 //! Pseudo-random function
 
+use crate::insecure_clone::private::InsecureClone;
 use crate::key::{Key, Key256, KeyAccessor};
 
 use clear_on_drop::clear::Clear;
@@ -32,6 +33,14 @@ use zeroize::Zeroize;
 #[zeroize(drop)]
 pub struct Prf {
     key: Key256,
+}
+
+impl InsecureClone for Prf {
+    fn insecure_clone(&self) -> Self {
+        Prf {
+            key: self.key.insecure_clone(),
+        }
+    }
 }
 
 impl Prf {

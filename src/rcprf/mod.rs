@@ -1,5 +1,6 @@
 //! Range-constrained PRF
 
+use crate::insecure_clone::private::InsecureClone;
 use crate::key::Key256;
 use crate::prg::KeyDerivationPrg;
 use crate::Prf;
@@ -222,9 +223,26 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfLeafElement {
 
     fn unchecked_constrain(
         &self,
-        _range: &RCPrfRange,
+        range: &RCPrfRange,
     ) -> Result<ConstrainedRCPrf, String> {
-        todo!();
+        debug_assert_eq!(range.width(), 1);
+        debug_assert_eq!(range.max(), self.index);
+
+        // here, we do have to copy the PRF
+        // We do so by getting the key and copying it
+        Ok(ConstrainedRCPrf {
+            elements: vec![Box::new(self.insecure_clone())],
+        })
+    }
+}
+
+impl InsecureClone for ConstrainedRCPrfLeafElement {
+    fn insecure_clone(&self) -> Self {
+        ConstrainedRCPrfLeafElement {
+            prf: self.prf.insecure_clone(),
+            rcprf_height: self.rcprf_height,
+            index: self.index,
+        }
     }
 }
 
@@ -260,11 +278,11 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
             .get_child_node(leaf, self.tree_height() - self.subtree_height());
 
         let half_width = 1u64 << (self.subtree_height() - 2);
-        // println!("Subtree height {}", self.subtree_height());
-        // println!("Half width {}", half_width);
         let submin = self.range.min() + (child as u64) * half_width;
         let submax = submin + half_width;
         let r = RCPrfRange::from(submin..submax);
+        // println!("Subtree height {}", self.subtree_height());
+        // println!("Half width {}", half_width);
 
         debug_assert!(self.range().contains_range(&r), "{} {}", self.range, r);
         debug_assert_eq!(self.range().width() / 2, half_width);
@@ -314,14 +332,83 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
 
     fn unchecked_constrain(
         &self,
-        _range: &RCPrfRange,
+        range: &RCPrfRange,
     ) -> Result<ConstrainedRCPrf, String> {
-        todo!();
+        debug_assert!(self.range().contains_range(range));
+
+        if self.range() == *range {
+            return Ok(ConstrainedRCPrf {
+                elements: vec![Box::new(self.insecure_clone())],
+            });
+        }
+
+        let half_width = 1u64 << (self.subtree_height() - 2);
+        let left_range = RCPrfRange::new(
+            self.range().min(),
+            self.range().min() + half_width - 1,
+        );
+        let right_range = RCPrfRange::new(
+            self.range().min() + half_width,
+            self.range().max(),
+        );
+
+        let left_constrained = match left_range.intersection(range) {
+            None => None,
+            Some(subrange) => {
+                let subkey = self.prg.derive_key(0);
+
+                let left_child = ConstrainedRCPrfInnerElement {
+                    prg: KeyDerivationPrg::from_key(subkey),
+                    range: left_range,
+                    subtree_height: self.subtree_height() - 1,
+                    rcprf_height: self.rcprf_height,
+                };
+                Some(left_child.unchecked_constrain(&subrange).unwrap())
+            }
+        };
+
+        let right_constrained = match right_range.intersection(range) {
+            None => None,
+            Some(subrange) => {
+                let subkey = self.prg.derive_key(1);
+
+                let right_child = ConstrainedRCPrfInnerElement {
+                    prg: KeyDerivationPrg::from_key(subkey),
+                    range: right_range,
+                    subtree_height: self.subtree_height() - 1,
+                    rcprf_height: self.rcprf_height,
+                };
+                Some(right_child.unchecked_constrain(&subrange).unwrap())
+            }
+        };
+
+        match (left_constrained, right_constrained) {
+            (None,None) => Err(format!("Error when constraining element of range {} on {}. Invalid constrain.",self.range(), range)),
+            (None, Some(constrained_rcprf)) => Ok(constrained_rcprf),
+            (Some(constrained_rcprf),None) => Ok(constrained_rcprf),
+            (Some(mut constrained_rcprf_left),
+                Some(constrained_rcprf_right)) =>
+                {
+                    constrained_rcprf_left.merge(constrained_rcprf_right)?;
+                    Ok(constrained_rcprf_left)
+                },
+        }
     }
 }
 impl RangePrf for ConstrainedRCPrfInnerElement {
     fn range(&self) -> RCPrfRange {
         self.range.clone()
+    }
+}
+
+impl InsecureClone for ConstrainedRCPrfInnerElement {
+    fn insecure_clone(&self) -> Self {
+        ConstrainedRCPrfInnerElement {
+            prg: self.prg.insecure_clone(),
+            rcprf_height: self.rcprf_height,
+            range: self.range.clone(),
+            subtree_height: self.subtree_height,
+        }
     }
 }
 
