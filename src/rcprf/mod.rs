@@ -135,12 +135,11 @@ pub trait RangePrf: private::UncheckedRangePrf {
         outputs: &mut [&mut [u8]],
     ) -> Result<(), String> {
         if !self.range().contains_range(range) {
-            Err(
-                format!(
+            Err(format!(
                 "Invalid evaluation range: {} is not contained in the valid range {}",
-                range, self.range(),
-            )
-            )
+                range,
+                self.range(),
+            ))
         } else if range.width() != outputs.len() as u64 {
             return Err(format!(
                 "Incompatible range width ({}) and outputs length ({}).",
@@ -159,12 +158,11 @@ pub trait RangePrf: private::UncheckedRangePrf {
         range: &RCPrfRange,
     ) -> Result<ConstrainedRCPrf, String> {
         if !self.range().contains_range(range) {
-            Err(
-                format!(
+            Err(format!(
                 "Invalid constrain range: {} is not contained in the valid range {}",
-                range, self.range(),
-            )
-            )
+                range,
+                self.range(),
+            ))
         } else {
             self.unchecked_constrain(range)
         }
@@ -383,15 +381,21 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
         };
 
         match (left_constrained, right_constrained) {
-            (None,None) => Err(format!("Error when constraining element of range {} on {}. Invalid constrain.",self.range(), range)),
+            (None, None) => Err(format!(
+                "Error when constraining element of range {} on {}. Invalid
+                constrain.",
+                self.range(),
+                range
+            )),
             (None, Some(constrained_rcprf)) => Ok(constrained_rcprf),
-            (Some(constrained_rcprf),None) => Ok(constrained_rcprf),
-            (Some(mut constrained_rcprf_left),
-                Some(constrained_rcprf_right)) =>
-                {
-                    constrained_rcprf_left.merge(constrained_rcprf_right)?;
-                    Ok(constrained_rcprf_left)
-                },
+            (Some(constrained_rcprf), None) => Ok(constrained_rcprf),
+            (
+                Some(mut constrained_rcprf_left),
+                Some(constrained_rcprf_right),
+            ) => {
+                constrained_rcprf_left.merge(constrained_rcprf_right)?;
+                Ok(constrained_rcprf_left)
+            }
         }
     }
 }
@@ -593,7 +597,7 @@ mod tests {
     }
 
     #[test]
-    fn rcprf_consistency() {
+    fn rcprf_range_consistency() {
         let h = 6u8;
 
         let rcprf = RCPrf::new(h).unwrap();
@@ -627,6 +631,47 @@ mod tests {
                     .skip(start as usize)
                     .take(range_width)
                     .zip(slice.iter());
+                couple.for_each(|(x, y)| assert_eq!(x, y));
+            }
+        }
+    }
+
+    #[test]
+    fn rcprf_constrain_consistency() {
+        let h = 6u8;
+
+        let rcprf = RCPrf::new(h).unwrap();
+
+        let direct_eval: Vec<[u8; 16]> = (0..=max_leaf_index(h))
+            .map(|x| {
+                let mut out = [0u8; 16];
+
+                rcprf.eval(x, &mut out).unwrap();
+                out
+            })
+            .collect();
+
+        // iterate over all the possible ranges
+        for start in 0..=max_leaf_index(h) {
+            for end in start..=max_leaf_index(h) {
+                let range_width = (end - start + 1) as usize;
+                let constrained_rcprf =
+                    rcprf.constrain(&RCPrfRange::new(start, end)).unwrap();
+
+                let constrained_eval: Vec<[u8; 16]> = (start..=end)
+                    .map(|x| {
+                        let mut out = [0u8; 16];
+
+                        constrained_rcprf.eval(x, &mut out).unwrap();
+                        out
+                    })
+                    .collect();
+
+                let couple = direct_eval
+                    .iter()
+                    .skip(start as usize)
+                    .take(range_width)
+                    .zip(constrained_eval.iter());
                 couple.for_each(|(x, y)| assert_eq!(x, y));
             }
         }
