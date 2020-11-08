@@ -2,7 +2,7 @@ use std::ops::Bound::*;
 use std::ops::{Bound, RangeBounds};
 
 /// Structure encoding the domain of a range-constrained PRF.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RCPrfRange {
     pub(crate) range: std::ops::RangeInclusive<u64>,
 }
@@ -40,6 +40,11 @@ impl std::fmt::Display for RCPrfRange {
 impl RCPrfRange {
     /// Creates a new range spanning from `min` to `max` (included).
     ///
+    /// ```
+    /// # extern crate crypto_tk_rs;
+    /// use crypto_tk_rs::RCPrfRange;
+    /// assert_eq!(RCPrfRange::new(4,6), RCPrfRange::from(4..7));
+    /// ```
     pub fn new(min: u64, max: u64) -> Self {
         RCPrfRange { range: (min..=max) }
     }
@@ -138,6 +143,59 @@ impl RCPrfRange {
         cond1 && cond2
     }
 
+    /// Returns the intersection with `r` or `None` if ranges do
+    ///  not intersect.
+    ///
+    /// # Example
+    /// ```
+    /// # extern crate crypto_tk_rs;
+    /// use crypto_tk_rs::RCPrfRange;
+    /// let range = RCPrfRange::from(4..7);
+    /// assert_eq!(range.intersection(&(2..3)), None);
+    /// assert_eq!(range.intersection(&(2..4)), None);
+    /// assert_eq!(range.intersection(&(2..=4)), Some(RCPrfRange::new(4,4)));
+    /// assert_eq!(range.intersection(&RCPrfRange::from(2..5)), Some(RCPrfRange::new(4,4)));
+    /// assert_eq!(range.intersection(&RCPrfRange::from(5..6)), Some(RCPrfRange::new(5,5)));
+    /// assert_eq!(range.intersection(&RCPrfRange::from(6..8)), Some(RCPrfRange::new(6,6)));
+    /// assert_eq!(range.intersection(&RCPrfRange::from(7..8)), None);
+    /// assert_eq!(range.intersection(&RCPrfRange::from(9..10)), None);
+    /// assert_eq!(range.intersection(&(0..0)), None);
+    /// ```
+    ///
+    pub fn intersection<R>(&self, r: &R) -> Option<RCPrfRange>
+    where
+        R: RangeBounds<u64>,
+    {
+        let mut intersects = true;
+        let r_start: u64 = match r.start_bound() {
+            Unbounded => 0,
+            Included(&a) if self.max() >= a => a,
+            Excluded(&a) if self.max() > a => a + 1, // if the condition is true, we are sure that a+1 is not overflowing
+            _ => {
+                intersects = false;
+                0
+            }
+        };
+
+        let r_end: u64 = match r.end_bound() {
+            Unbounded => u64::max_value(),
+            Included(&a) if self.min() <= a => a,
+            Excluded(&a) if self.min() < a => a - 1, // if the condition is true, we are sure that a-1 is not underflowing
+            _ => {
+                intersects = false;
+                0
+            }
+        };
+
+        if intersects {
+            Some(RCPrfRange::new(
+                r_start.max(self.min()),
+                r_end.min(self.max()),
+            ))
+        } else {
+            None
+        }
+    }
     /// Returns `true` if `r` is contained in the range
     ///
     /// # Example

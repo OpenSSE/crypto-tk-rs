@@ -7,6 +7,7 @@ use crate::Prf;
 // use clear_on_drop::clear::Clear;
 // use zeroize::Zeroize;
 
+/// Range structure and functions for use with RCPRFs.
 pub mod rcprf_range;
 
 pub use crate::rcprf_range::RCPrfRange;
@@ -152,8 +153,21 @@ pub trait RangePrf: private::UncheckedRangePrf {
 
     /// Constrain the PRF on `range`.
     /// Returns an error if `range` does not intersect the PRF's range
-    fn constrain(&self, range: &RCPrfRange)
-        -> Result<ConstrainedRCPrf, String>;
+    fn constrain(
+        &self,
+        range: &RCPrfRange,
+    ) -> Result<ConstrainedRCPrf, String> {
+        if !self.range().contains_range(range) {
+            Err(
+                format!(
+                "Invalid constrain range: {} is not contained in the valid range {}",
+                range, self.range(),
+            )
+            )
+        } else {
+            self.unchecked_constrain(range)
+        }
+    }
 }
 
 /// Trait representing a PRF built on a tree structure
@@ -164,7 +178,7 @@ pub trait TreeBasedPrf {
     fn tree_height(&self) -> u8;
 }
 
-trait RCPrfElement: TreeBasedPrf {
+trait RCPrfElement: TreeBasedPrf + RangePrf {
     fn is_leaf(&self) -> bool;
     fn subtree_height(&self) -> u8;
 
@@ -217,13 +231,6 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfLeafElement {
 impl RangePrf for ConstrainedRCPrfLeafElement {
     fn range(&self) -> RCPrfRange {
         RCPrfRange::new(self.index, self.index)
-    }
-
-    fn constrain(
-        &self,
-        _range: &RCPrfRange,
-    ) -> Result<ConstrainedRCPrf, String> {
-        Err("Cannot constrain a leaf element".to_string())
     }
 }
 
@@ -316,13 +323,6 @@ impl RangePrf for ConstrainedRCPrfInnerElement {
     fn range(&self) -> RCPrfRange {
         self.range.clone()
     }
-
-    fn constrain(
-        &self,
-        range: &RCPrfRange,
-    ) -> Result<ConstrainedRCPrf, String> {
-        todo!()
-    }
 }
 
 impl TreeBasedPrf for RCPrf {
@@ -359,13 +359,6 @@ impl RangePrf for RCPrf {
     fn range(&self) -> RCPrfRange {
         self.root.range()
     }
-
-    fn constrain(
-        &self,
-        range: &RCPrfRange,
-    ) -> Result<ConstrainedRCPrf, String> {
-        todo!()
-    }
 }
 
 impl RCPrf {
@@ -386,6 +379,111 @@ impl RCPrf {
                 subtree_height: height,
             },
         })
+    }
+}
+
+impl private::UncheckedRangePrf for ConstrainedRCPrf {
+    fn unchecked_eval(&self, x: u64, output: &mut [u8]) -> Result<(), String> {
+        self.elements
+            .iter()
+            .find(|elt| elt.range().contains_leaf(x))
+            .unwrap()
+            .unchecked_eval(x, output)
+    }
+
+    fn unchecked_eval_range(
+        &self,
+        range: &RCPrfRange,
+        outputs: &mut [&mut [u8]],
+    ) -> Result<(), String> {
+        let mut buffer_offset = 0usize;
+        for elt in &self.elements {
+            match elt.range().intersection(range) {
+                Some(r) => {
+                    let r_width = r.width();
+                    elt.eval_range(
+                        &r,
+                        &mut outputs
+                            [buffer_offset..buffer_offset + r_width as usize],
+                    )
+                    .unwrap();
+                    buffer_offset += r_width as usize;
+                }
+                None => (),
+            }
+        }
+        Ok(())
+    }
+
+    fn unchecked_constrain(
+        &self,
+        range: &RCPrfRange,
+    ) -> Result<ConstrainedRCPrf, String> {
+        let mut constrained_rcprf = ConstrainedRCPrf {
+            elements: Vec::new(),
+        };
+
+        for elt in &self.elements {
+            match elt.range().intersection(range) {
+                Some(r) => {
+                    constrained_rcprf
+                        .merge(elt.unchecked_constrain(&r).unwrap())
+                        .unwrap();
+                }
+                None => (),
+            }
+        }
+
+        Ok(constrained_rcprf)
+    }
+}
+impl TreeBasedPrf for ConstrainedRCPrf {
+    fn tree_height(&self) -> u8 {
+        debug_assert!(self.elements.len() > 0);
+        self.elements[0].tree_height()
+    }
+}
+
+impl RangePrf for ConstrainedRCPrf {
+    fn range(&self) -> RCPrfRange {
+        RCPrfRange::new(
+            self.elements[0].range().min(),
+            self.elements[self.elements.len() - 1].range().min(),
+        )
+    }
+}
+
+impl ConstrainedRCPrf {
+    fn merge(
+        &mut self,
+        mut merged_rcprf: ConstrainedRCPrf,
+    ) -> Result<(), String> {
+        // only proceed if the ranges are consecutive
+
+        if self.elements.len() == 0 {
+            *self = merged_rcprf;
+            return Ok(());
+        } else if merged_rcprf.elements.len() == 0 {
+            return Ok(());
+        } else if self.range().max() < merged_rcprf.range().min() {
+            if merged_rcprf.range().min() - self.range().max() == 1 {
+                // we must append the elements of merged_rcprf to ours
+                self.elements.append(&mut merged_rcprf.elements);
+                return Ok(());
+            }
+        } else if self.range().min() > merged_rcprf.range().max() {
+            if self.range().min() - merged_rcprf.range().max() == 1 {
+                // we must prepend the elements of merged_rcprf to ours
+                merged_rcprf.elements.append(&mut self.elements);
+                self.elements = merged_rcprf.elements;
+                return Ok(());
+            }
+        }
+        Err(format!(
+            "Ranges of the RCPRFs to be merged are not consecutive: {} and {}",
+            self.range(),
+            merged_rcprf.range()
+        ))
     }
 }
 
