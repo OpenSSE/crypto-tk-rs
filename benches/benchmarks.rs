@@ -59,4 +59,68 @@ mod prg_benches {
     criterion_group!(benches, prg);
 }
 
-criterion_main!(prf_benches::benches, prg_benches::benches);
+mod rcprf_benches {
+    use super::*;
+    use crypto_tk_rs::rcprf::*;
+    use crypto_tk_rs::RCPrfRange;
+
+    const RCPRF_HEIGHT: u8 = 48;
+    pub fn rcprf_iter_eval(c: &mut Criterion) {
+        macro_rules! rcprf_iter_eval_bench {
+            ($size:expr) => {{
+                let rcprf = RCPrf::new(RCPRF_HEIGHT).unwrap();
+
+                let mut out = [0u8; 16];
+                c.bench_function(
+                    &format!("rcprf_iter_eval_width_{}", $size),
+                    |b| {
+                        b.iter(|| {
+                            for x in 0..$size {
+                                rcprf.eval(x, &mut out).unwrap();
+                            }
+                        });
+                    },
+                );
+            }};
+        }
+
+        rcprf_iter_eval_bench!(16);
+        rcprf_iter_eval_bench!(32);
+        rcprf_iter_eval_bench!(512);
+    }
+    pub fn rcprf_range_eval(c: &mut Criterion) {
+        macro_rules! rcprf_range_eval_bench {
+            ($size:expr) => {{
+                let rcprf = RCPrf::new(RCPRF_HEIGHT).unwrap();
+                let mut outs = vec![[0u8; 16]; $size];
+                let mut slice: Vec<&mut [u8]> =
+                    outs.iter_mut().map(|x| &mut x[..]).collect();
+
+                c.bench_function(
+                    &format!("rcprf_range_eval_width_{}", $size),
+                    |b| {
+                        b.iter(|| {
+                            rcprf
+                                .eval_range(
+                                    &RCPrfRange::from(0..$size),
+                                    &mut slice,
+                                )
+                                .unwrap();
+                        });
+                    },
+                );
+            }};
+        }
+
+        rcprf_range_eval_bench!(16);
+        rcprf_range_eval_bench!(32);
+        rcprf_range_eval_bench!(512);
+    }
+    criterion_group!(benches, rcprf_iter_eval, rcprf_range_eval);
+}
+
+criterion_main!(
+    prf_benches::benches,
+    prg_benches::benches,
+    rcprf_benches::benches
+);
