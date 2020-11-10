@@ -321,11 +321,98 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
         range: &RCPrfRange,
         outputs: &mut [&mut [u8]],
     ) -> Result<(), String> {
-        range
-            .clone()
-            .range
-            .zip(outputs)
-            .try_for_each(|(i, out)| self.unchecked_eval(i, out))
+        // range
+        //     .clone()
+        //     .range
+        //     .zip(outputs)
+        //     .try_for_each(|(i, out)| self.unchecked_eval(i, out))
+        if self.subtree_height() > 2 {
+            let half_width = 1u64 << (self.subtree_height() - 2);
+            let mut out_offset = 0usize;
+
+            // use scopes to avoid any mixups between left and right subtrees
+            {
+                let left_range = RCPrfRange::new(
+                    self.range().min(),
+                    self.range().min() + half_width - 1,
+                );
+
+                match left_range.intersection(range) {
+                    None => (),
+                    Some(r) => {
+                        let subkey = self.prg.derive_key(0);
+                        let left_child = ConstrainedRCPrfInnerElement {
+                            prg: KeyDerivationPrg::from_key(subkey),
+                            range: left_range,
+                            subtree_height: self.subtree_height() - 1,
+                            rcprf_height: self.rcprf_height,
+                        };
+                        left_child.eval_range(
+                            &r,
+                            &mut outputs[0..r.width() as usize],
+                        )?;
+                        out_offset = r.width() as usize;
+                    }
+                }
+            }
+
+            {
+                let right_range = RCPrfRange::new(
+                    self.range().min() + half_width,
+                    self.range().max(),
+                );
+
+                match right_range.intersection(range) {
+                    None => (),
+                    Some(r) => {
+                        let subkey = self.prg.derive_key(1);
+                        let right_child = ConstrainedRCPrfInnerElement {
+                            prg: KeyDerivationPrg::from_key(subkey),
+                            range: right_range,
+                            subtree_height: self.subtree_height() - 1,
+                            rcprf_height: self.rcprf_height,
+                        };
+                        right_child.eval_range(
+                            &r,
+                            &mut outputs
+                                [out_offset..out_offset + r.width() as usize],
+                        )?;
+                    }
+                }
+            }
+        } else {
+            // we are getting a leaf
+            debug_assert!(range.width() <= 2);
+
+            let mut out_offset = 0usize;
+            if range.contains_leaf(self.range().min()) {
+                let subkey = self.prg.derive_key(0);
+
+                let child_node = ConstrainedRCPrfLeafElement {
+                    prf: Prf::from_key(subkey),
+                    index: range.min(),
+                    rcprf_height: self.rcprf_height,
+                };
+                child_node
+                    .unchecked_eval(self.range().min(), &mut outputs[0])?;
+                out_offset += 1;
+            }
+
+            if range.contains_leaf(self.range().max()) {
+                let subkey = self.prg.derive_key(1);
+
+                let child_node = ConstrainedRCPrfLeafElement {
+                    prf: Prf::from_key(subkey),
+                    index: range.max(),
+                    rcprf_height: self.rcprf_height,
+                };
+                child_node.unchecked_eval(
+                    self.range().max(),
+                    &mut outputs[out_offset],
+                )?;
+            }
+        }
+        Ok(())
     }
 
     fn unchecked_constrain(
