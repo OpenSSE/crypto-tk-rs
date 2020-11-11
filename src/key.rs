@@ -165,8 +165,8 @@ mod tests {
         let k1 = Key256::from_bytes(&mut buf);
         let k2 = Key256::from_slice(&mut buf_copy_2[..]);
 
-        assert_eq!(k1.content, buf_copy_1);
-        assert_eq!(k2.content, buf_copy_1);
+        assert_eq!(*k1.content, buf_copy_1);
+        assert_eq!(*k2.content, buf_copy_1);
 
         assert_eq!(k1.content, k1.insecure_clone().content);
 
