@@ -22,7 +22,7 @@ pub(crate) mod leaf_element;
 use crate::inner_element::*;
 use crate::leaf_element::*;
 pub use crate::rcprf_range::*;
-use crate::traits::*;
+pub use crate::traits::*;
 
 /// Range-constrained pseudo-random functions
 ///
