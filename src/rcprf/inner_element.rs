@@ -29,11 +29,7 @@ impl RCPrfElement for ConstrainedRCPrfInnerElement {
 }
 
 impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
-    fn unchecked_eval(
-        &self,
-        leaf: u64,
-        output: &mut [u8],
-    ) -> Result<(), String> {
+    fn unchecked_eval(&self, leaf: u64, output: &mut [u8]) {
         let child = self
             .get_child_node(leaf, self.tree_height() - self.subtree_height());
 
@@ -64,7 +60,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
                 subtree_height: self.subtree_height() - 1,
                 rcprf_height: self.rcprf_height,
             };
-            child_node.eval(leaf, output)
+            child_node.eval(leaf, output).unwrap();
         } else {
             debug_assert_eq!(self.subtree_height, 2);
             debug_assert_eq!(half_width, 1);
@@ -74,7 +70,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
                 index: r.min(),
                 rcprf_height: self.rcprf_height,
             };
-            child_node.eval(leaf, output)
+            child_node.eval(leaf, output).unwrap();
         }
     }
 
@@ -82,7 +78,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
         &self,
         range: &RCPrfRange,
         outputs: &mut [&mut [u8]],
-    ) -> Result<(), String> {
+    ) {
         // range
         //     .clone()
         //     .range
@@ -109,10 +105,9 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
                             subtree_height: self.subtree_height() - 1,
                             rcprf_height: self.rcprf_height,
                         };
-                        left_child.eval_range(
-                            &r,
-                            &mut outputs[0..r.width() as usize],
-                        )?;
+                        left_child
+                            .eval_range(&r, &mut outputs[0..r.width() as usize])
+                            .unwrap();
                         out_offset = r.width() as usize;
                     }
                 }
@@ -134,11 +129,13 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
                             subtree_height: self.subtree_height() - 1,
                             rcprf_height: self.rcprf_height,
                         };
-                        right_child.eval_range(
-                            &r,
-                            &mut outputs
-                                [out_offset..out_offset + r.width() as usize],
-                        )?;
+                        right_child
+                            .eval_range(
+                                &r,
+                                &mut outputs[out_offset
+                                    ..out_offset + r.width() as usize],
+                            )
+                            .unwrap();
                     }
                 }
             }
@@ -155,8 +152,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
                     index: range.min(),
                     rcprf_height: self.rcprf_height,
                 };
-                child_node
-                    .unchecked_eval(self.range().min(), &mut outputs[0])?;
+                child_node.unchecked_eval(self.range().min(), &mut outputs[0]);
                 out_offset += 1;
             }
 
@@ -171,10 +167,9 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
                 child_node.unchecked_eval(
                     self.range().max(),
                     &mut outputs[out_offset],
-                )?;
+                );
             }
         }
-        Ok(())
     }
 
     #[cfg(feature = "rayon")]
@@ -182,7 +177,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
         &self,
         range: &RCPrfRange,
         outputs: &mut [&mut [u8]],
-    ) -> Result<(), String> {
+    ) {
         if self.subtree_height() > 2 {
             let half_width = 1u64 << (self.subtree_height() - 2);
 
@@ -258,8 +253,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
                     index: range.min(),
                     rcprf_height: self.rcprf_height,
                 };
-                child_node
-                    .unchecked_eval(self.range().min(), &mut outputs[0])?;
+                child_node.unchecked_eval(self.range().min(), &mut outputs[0]);
                 out_offset += 1;
             }
 
@@ -274,10 +268,9 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
                 child_node.unchecked_eval(
                     self.range().max(),
                     &mut outputs[out_offset],
-                )?;
+                );
             }
         }
-        Ok(())
     }
 
     fn unchecked_constrain(

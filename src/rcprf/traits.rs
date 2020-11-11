@@ -4,17 +4,13 @@ pub(crate) mod private {
     use super::*;
 
     pub trait UncheckedRangePrf {
-        fn unchecked_eval(
-            &self,
-            x: u64,
-            output: &mut [u8],
-        ) -> Result<(), String>;
+        fn unchecked_eval(&self, x: u64, output: &mut [u8]);
 
         fn unchecked_eval_range(
             &self,
             range: &RCPrfRange,
             outputs: &mut [&mut [u8]],
-        ) -> Result<(), String>;
+        );
 
         fn unchecked_constrain(
             &self,
@@ -26,7 +22,7 @@ pub(crate) mod private {
             &self,
             range: &RCPrfRange,
             outputs: &mut [&mut [u8]],
-        ) -> Result<(), String>;
+        );
     }
 }
 
@@ -45,7 +41,8 @@ pub trait RangePrf: private::UncheckedRangePrf {
                 self.range(),
             ))
         } else {
-            self.unchecked_eval(x, output)
+            self.unchecked_eval(x, output);
+            Ok(())
         }
     }
 
@@ -65,13 +62,14 @@ pub trait RangePrf: private::UncheckedRangePrf {
                 self.range(),
             ))
         } else if range.width() != outputs.len() as u64 {
-            return Err(format!(
+            Err(format!(
                 "Incompatible range width ({}) and outputs length ({}).",
                 range.width(),
                 outputs.len()
-            ));
+            ))
         } else {
-            self.unchecked_eval_range(range, outputs)
+            self.unchecked_eval_range(range, outputs);
+            Ok(())
         }
     }
 
@@ -91,13 +89,14 @@ pub trait RangePrf: private::UncheckedRangePrf {
                 self.range(),
             ))
         } else if range.width() != outputs.len() as u64 {
-            return Err(format!(
+            Err(format!(
                 "Incompatible range width ({}) and outputs length ({}).",
                 range.width(),
                 outputs.len()
-            ));
+            ))
         } else {
-            self.unchecked_par_eval_range(range, outputs)
+            self.unchecked_par_eval_range(range, outputs);
+            Ok(())
         }
     }
 

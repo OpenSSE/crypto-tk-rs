@@ -100,11 +100,7 @@ impl TreeBasedPrf for RCPrf {
 }
 
 impl private::UncheckedRangePrf for RCPrf {
-    fn unchecked_eval(
-        &self,
-        leaf: u64,
-        output: &mut [u8],
-    ) -> Result<(), String> {
+    fn unchecked_eval(&self, leaf: u64, output: &mut [u8]) {
         self.root.unchecked_eval(leaf, output)
     }
 
@@ -112,7 +108,7 @@ impl private::UncheckedRangePrf for RCPrf {
         &self,
         range: &RCPrfRange,
         outputs: &mut [&mut [u8]],
-    ) -> Result<(), String> {
+    ) {
         self.root.unchecked_eval_range(range, outputs)
     }
 
@@ -121,7 +117,7 @@ impl private::UncheckedRangePrf for RCPrf {
         &self,
         range: &RCPrfRange,
         outputs: &mut [&mut [u8]],
-    ) -> Result<(), String> {
+    ) {
         self.root.unchecked_par_eval_range(range, outputs)
     }
 
@@ -160,7 +156,7 @@ impl RCPrf {
 }
 
 impl private::UncheckedRangePrf for ConstrainedRCPrf {
-    fn unchecked_eval(&self, x: u64, output: &mut [u8]) -> Result<(), String> {
+    fn unchecked_eval(&self, x: u64, output: &mut [u8]) {
         self.elements
             .iter()
             .find(|elt| elt.range().contains_leaf(x))
@@ -172,7 +168,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrf {
         &self,
         range: &RCPrfRange,
         outputs: &mut [&mut [u8]],
-    ) -> Result<(), String> {
+    ) {
         let mut current = outputs;
         for elt in &self.elements {
             match elt.range().intersection(range) {
@@ -186,7 +182,6 @@ impl private::UncheckedRangePrf for ConstrainedRCPrf {
                 None => (),
             }
         }
-        Ok(())
     }
 
     #[cfg(feature = "rayon")]
@@ -194,7 +189,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrf {
         &self,
         range: &RCPrfRange,
         outputs: &mut [&mut [u8]],
-    ) -> Result<(), String> {
+    ) {
         rayon::scope(move |s| {
             let mut current = outputs;
             for elt in &self.elements {
@@ -205,14 +200,13 @@ impl private::UncheckedRangePrf for ConstrainedRCPrf {
                             current.split_at_mut(r_width);
                         current = right_slice;
                         s.spawn(move |_| {
-                            elt.eval_range(&r, &mut left_slice).unwrap();
+                            elt.par_eval_range(&r, &mut left_slice).unwrap();
                         });
                     }
                     None => (),
                 }
             }
         });
-        Ok(())
     }
 
     fn unchecked_constrain(

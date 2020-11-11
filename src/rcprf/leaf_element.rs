@@ -28,20 +28,19 @@ impl RCPrfElement for ConstrainedRCPrfLeafElement {
 }
 
 impl private::UncheckedRangePrf for ConstrainedRCPrfLeafElement {
-    fn unchecked_eval(&self, x: u64, output: &mut [u8]) -> Result<(), String> {
+    fn unchecked_eval(&self, x: u64, output: &mut [u8]) {
         debug_assert_eq!(x, self.index);
         self.prf.fill_bytes(&[0u8], output);
-        Ok(())
     }
 
     fn unchecked_eval_range(
         &self,
         range: &RCPrfRange,
         outputs: &mut [&mut [u8]],
-    ) -> Result<(), String> {
+    ) {
         debug_assert_eq!(range.min(), self.index);
         debug_assert_eq!(range.max(), self.index);
-        self.eval(range.min(), &mut outputs[0])
+        self.unchecked_eval(range.min(), &mut outputs[0])
     }
 
     #[cfg(feature = "rayon")]
@@ -49,7 +48,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfLeafElement {
         &self,
         range: &RCPrfRange,
         outputs: &mut [&mut [u8]],
-    ) -> Result<(), String> {
+    ) {
         // there is no point in parallelizing here
         self.unchecked_eval_range(range, outputs)
     }
