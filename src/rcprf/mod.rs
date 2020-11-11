@@ -171,15 +171,12 @@ impl private::UncheckedRangePrf for ConstrainedRCPrf {
     ) {
         let mut current = outputs;
         for elt in &self.elements {
-            match elt.range().intersection(range) {
-                Some(r) => {
-                    let r_width = r.width() as usize;
-                    let (mut left_slice, right_slice) =
-                        current.split_at_mut(r_width);
-                    current = right_slice;
-                    elt.eval_range(&r, &mut left_slice).unwrap();
-                }
-                None => (),
+            if let Some(r) = elt.range().intersection(range) {
+                let r_width = r.width() as usize;
+                let (mut left_slice, right_slice) =
+                    current.split_at_mut(r_width);
+                current = right_slice;
+                elt.eval_range(&r, &mut left_slice).unwrap();
             }
         }
     }
@@ -193,17 +190,14 @@ impl private::UncheckedRangePrf for ConstrainedRCPrf {
         rayon::scope(move |s| {
             let mut current = outputs;
             for elt in &self.elements {
-                match elt.range().intersection(range) {
-                    Some(r) => {
-                        let r_width = r.width() as usize;
-                        let (mut left_slice, right_slice) =
-                            current.split_at_mut(r_width);
-                        current = right_slice;
-                        s.spawn(move |_| {
-                            elt.par_eval_range(&r, &mut left_slice).unwrap();
-                        });
-                    }
-                    None => (),
+                if let Some(r) = elt.range().intersection(range) {
+                    let r_width = r.width() as usize;
+                    let (mut left_slice, right_slice) =
+                        current.split_at_mut(r_width);
+                    current = right_slice;
+                    s.spawn(move |_| {
+                        elt.par_eval_range(&r, &mut left_slice).unwrap();
+                    });
                 }
             }
         });
@@ -218,22 +212,20 @@ impl private::UncheckedRangePrf for ConstrainedRCPrf {
         };
 
         for elt in &self.elements {
-            match elt.range().intersection(range) {
-                Some(r) => {
-                    constrained_rcprf
-                        .merge(elt.unchecked_constrain(&r).unwrap())
-                        .unwrap();
-                }
-                None => (),
+            if let Some(r) = elt.range().intersection(range) {
+                constrained_rcprf
+                    .merge(elt.unchecked_constrain(&r).unwrap())
+                    .unwrap();
             }
         }
 
         Ok(constrained_rcprf)
     }
 }
+
 impl TreeBasedPrf for ConstrainedRCPrf {
     fn tree_height(&self) -> u8 {
-        debug_assert!(self.elements.len() > 0);
+        debug_assert!(!self.elements.is_empty());
         self.elements[0].tree_height()
     }
 }
@@ -261,10 +253,10 @@ impl ConstrainedRCPrf {
     ) -> Result<(), String> {
         // only proceed if the ranges are consecutive
 
-        if self.elements.len() == 0 {
+        if self.elements.is_empty() {
             *self = merged_rcprf;
             return Ok(());
-        } else if merged_rcprf.elements.len() == 0 {
+        } else if merged_rcprf.elements.is_empty() {
             return Ok(());
         } else if self.range().max() < merged_rcprf.range().min() {
             if merged_rcprf.range().min() - self.range().max() == 1 {
@@ -272,13 +264,13 @@ impl ConstrainedRCPrf {
                 self.elements.append(&mut merged_rcprf.elements);
                 return Ok(());
             }
-        } else if self.range().min() > merged_rcprf.range().max() {
-            if self.range().min() - merged_rcprf.range().max() == 1 {
-                // we must prepend the elements of merged_rcprf to ours
-                merged_rcprf.elements.append(&mut self.elements);
-                self.elements = merged_rcprf.elements;
-                return Ok(());
-            }
+        } else if self.range().min() > merged_rcprf.range().max()
+            && self.range().min() - merged_rcprf.range().max() == 1
+        {
+            // we must prepend the elements of merged_rcprf to ours
+            merged_rcprf.elements.append(&mut self.elements);
+            self.elements = merged_rcprf.elements;
+            return Ok(());
         }
         Err(format!(
             "Ranges of the RCPRFs to be merged are not consecutive: {} and {}",

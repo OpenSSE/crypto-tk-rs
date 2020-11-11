@@ -130,10 +130,10 @@ impl Zeroize for Key256 {
 
 impl InsecureClone for Key256 {
     fn insecure_clone(&self) -> Self {
-        return Self {
+        Self {
             content: self.content.clone(),
             _marker: std::marker::PhantomPinned,
-        };
+        }
     }
 }
 
