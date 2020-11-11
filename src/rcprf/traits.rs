@@ -24,6 +24,28 @@ pub(crate) mod private {
             outputs: &mut [&mut [u8]],
         );
     }
+
+    pub(crate) trait RCPrfElement:
+        TreeBasedPrf + RangePrf + Send + Sync + Zeroize
+    {
+        fn is_leaf(&self) -> bool;
+        fn subtree_height(&self) -> u8;
+
+        fn get_child_node(
+            &self,
+            leaf: u64,
+            node_depth: u8,
+        ) -> RCPrfTreeNodeChild {
+            get_child_node(self.tree_height(), leaf, node_depth)
+        }
+
+        fn split_node(
+            &self,
+        ) -> (
+            Pin<Box<dyn private::RCPrfElement>>,
+            Pin<Box<dyn private::RCPrfElement>>,
+        );
+    }
 }
 
 /// Trait representing a PRF that can be evaluated on an integral range

@@ -14,13 +14,15 @@ impl From<std::ops::Range<u64>> for RCPrfRange {
         if range.end == range.start {
             panic!("Invalid empty input range");
         }
-        RCPrfRange::from(range.start..=(range.end - 1))
+        RCPrfRange::new(range.start, range.end - 1)
     }
 }
 
 impl From<std::ops::RangeInclusive<u64>> for RCPrfRange {
     fn from(range: std::ops::RangeInclusive<u64>) -> Self {
-        RCPrfRange { range }
+        RCPrfRange::new(*range.start(), *range.end())
+
+        // RCPrfRange { range }
     }
 }
 
@@ -55,6 +57,7 @@ impl RCPrfRange {
     /// assert_eq!(RCPrfRange::new(4,6), RCPrfRange::from(4..7));
     /// ```
     pub fn new(min: u64, max: u64) -> Self {
+        assert!(min <= max, "Invalid range input");
         RCPrfRange { range: (min..=max) }
     }
 

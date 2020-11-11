@@ -17,13 +17,22 @@ impl TreeBasedPrf for ConstrainedRCPrfLeafElement {
     }
 }
 
-impl RCPrfElement for ConstrainedRCPrfLeafElement {
+impl private::RCPrfElement for ConstrainedRCPrfLeafElement {
     fn is_leaf(&self) -> bool {
         true
     }
 
     fn subtree_height(&self) -> u8 {
         2
+    }
+
+    fn split_node(
+        &self,
+    ) -> (
+        Pin<Box<dyn private::RCPrfElement>>,
+        Pin<Box<dyn private::RCPrfElement>>,
+    ) {
+        panic!("Invalid tree state: trying to split a leaf!");
     }
 }
 

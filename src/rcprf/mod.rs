@@ -1,5 +1,7 @@
 //! Range-constrained PRF
 
+use std::collections::VecDeque;
+use std::iter::FromIterator;
 use std::pin::Pin;
 
 use crate::insecure_clone::private::InsecureClone;
@@ -14,10 +16,13 @@ pub mod rcprf_range;
 /// Traits used to describe RCPRFs.
 pub mod traits;
 
-/// Nodes of the tree-based RCPRF .
+/// Nodes of the tree-based RCPRF.
 pub(crate) mod inner_element;
-/// Leaves of the tree-based RCPRF .
+/// Leaves of the tree-based RCPRF.
 pub(crate) mod leaf_element;
+
+/// All the generators for the RCPRF
+pub mod iterator;
 
 use crate::inner_element::*;
 use crate::leaf_element::*;
@@ -35,7 +40,7 @@ pub use crate::traits::*;
 
 // Type encoding a choice of child in a binary tree.
 #[derive(Clone, Copy, Debug)]
-enum RCPrfTreeNodeChild {
+pub(crate) enum RCPrfTreeNodeChild {
     LeftChild = 0,
     RightChild = 1,
 }
@@ -81,16 +86,7 @@ pub struct RCPrf {
 
 /// A *constrained* RCPrf object (obtained after constraining a RCPrf - constrained or not)
 pub struct ConstrainedRCPrf {
-    elements: Vec<Pin<Box<dyn RCPrfElement>>>,
-}
-
-trait RCPrfElement: TreeBasedPrf + RangePrf + Send + Sync + Zeroize {
-    fn is_leaf(&self) -> bool;
-    fn subtree_height(&self) -> u8;
-
-    fn get_child_node(&self, leaf: u64, node_depth: u8) -> RCPrfTreeNodeChild {
-        get_child_node(self.tree_height(), leaf, node_depth)
-    }
+    elements: Vec<Pin<Box<dyn private::RCPrfElement>>>,
 }
 
 impl TreeBasedPrf for RCPrf {
@@ -152,6 +148,16 @@ impl RCPrf {
                 subtree_height: height,
             },
         })
+    }
+
+    pub fn iter_range(
+        &self,
+        range: &RCPrfRange,
+        output_width: usize,
+    ) -> Result<iterator::RCPrfIterator, String> {
+        let constrained_rcprf = self.constrain(range)?;
+
+        Ok(constrained_rcprf.into_iter(output_width))
     }
 }
 
@@ -278,6 +284,13 @@ impl ConstrainedRCPrf {
             merged_rcprf.range()
         ))
     }
+
+    fn into_iter(self, out_size: usize) -> iterator::RCPrfIterator {
+        iterator::RCPrfIterator {
+            node_queue: VecDeque::from_iter(self.elements.into_iter()),
+            output_size: out_size,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -371,8 +384,8 @@ mod tests {
         for start in 0..=max_leaf_index(h) {
             for end in start..=max_leaf_index(h) {
                 let range_width = (end - start + 1) as usize;
-                let constrained_rcprf =
-                    rcprf.constrain(&RCPrfRange::new(start, end)).unwrap();
+                let range = RCPrfRange::new(start, end);
+                let constrained_rcprf = rcprf.constrain(&range).unwrap();
 
                 let constrained_eval: Vec<[u8; 16]> = (start..=end)
                     .map(|x| {
@@ -383,12 +396,16 @@ mod tests {
                     })
                     .collect();
 
-                let couple = direct_eval
+                let triplets = direct_eval
                     .iter()
                     .skip(start as usize)
                     .take(range_width)
-                    .zip(constrained_eval.iter());
-                couple.for_each(|(x, y)| assert_eq!(x, y));
+                    .zip(constrained_eval.iter())
+                    .zip(rcprf.iter_range(&range, 16).unwrap());
+                triplets.for_each(|((x, y), z)| {
+                    assert_eq!(x, y);
+                    assert_eq!(&x[..], &z[..])
+                });
             }
         }
     }

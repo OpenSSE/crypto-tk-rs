@@ -1,3 +1,4 @@
+use crate::private::RCPrfElement;
 use crate::rcprf::*;
 use crate::Prf;
 
@@ -25,6 +26,53 @@ impl RCPrfElement for ConstrainedRCPrfInnerElement {
 
     fn subtree_height(&self) -> u8 {
         self.subtree_height
+    }
+
+    fn split_node(
+        &self,
+    ) -> (
+        Pin<Box<dyn private::RCPrfElement>>,
+        Pin<Box<dyn private::RCPrfElement>>,
+    ) {
+        let (subkey_left, subkey_right) = self.prg.derive_key_pair(0);
+        if self.subtree_height > 2 {
+            let half_width = self.range().width() / 2;
+            let range_left = RCPrfRange::from(
+                self.range().min()..self.range().min() + half_width,
+            );
+            let range_right = RCPrfRange::from(
+                self.range().min() + half_width..self.range().max(),
+            );
+            (
+                Box::pin(ConstrainedRCPrfInnerElement {
+                    prg: KeyDerivationPrg::from_key(subkey_left),
+                    range: range_left,
+                    subtree_height: self.subtree_height() - 1,
+                    rcprf_height: self.rcprf_height,
+                }),
+                Box::pin(ConstrainedRCPrfInnerElement {
+                    prg: KeyDerivationPrg::from_key(subkey_right),
+                    range: range_right,
+                    subtree_height: self.subtree_height() - 1,
+                    rcprf_height: self.rcprf_height,
+                }),
+            )
+        } else {
+            debug_assert_eq!(self.subtree_height, 2);
+
+            (
+                Box::pin(ConstrainedRCPrfLeafElement {
+                    prf: Prf::from_key(subkey_left),
+                    index: self.range().min(),
+                    rcprf_height: self.rcprf_height,
+                }),
+                Box::pin(ConstrainedRCPrfLeafElement {
+                    prf: Prf::from_key(subkey_right),
+                    index: self.range().max(),
+                    rcprf_height: self.rcprf_height,
+                }),
+            )
+        }
     }
 }
 
