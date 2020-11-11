@@ -3,10 +3,12 @@
 use crate::insecure_clone::private::InsecureClone;
 
 use rand::prelude::*;
-use zeroize::Zeroize;
+use std::ops::{Deref, DerefMut};
+
+use zeroize::{Zeroize, Zeroizing};
 
 /// Wrapper trait for key material
-pub trait Key: InsecureClone {
+pub trait Key: InsecureClone + Zeroize {
     /// Size of the key in bytes
     const KEY_SIZE: usize;
 
@@ -54,10 +56,11 @@ pub(crate) trait KeyAccessor {
 }
 
 /// A 256 bits (64 bytes) secret key. The key is zeroed upon drop.
-#[derive(Zeroize)]
-#[zeroize(drop)]
+// #[derive(Zeroize)]
+// #[zeroize(drop)]
 pub struct Key256 {
-    content: [u8; 32],
+    content: Zeroizing<[u8; 32]>,
+    _marker: std::marker::PhantomPinned,
 }
 impl Key256 {
     /// Construct a `Key256` key from a slice of bytes and zero the slice.
@@ -78,7 +81,8 @@ impl Key256 {
     /// ```
     pub fn from_bytes(randomness: &mut [u8; 32]) -> Key256 {
         let k = Key256 {
-            content: *randomness,
+            content: Zeroizing::new(*randomness),
+            _marker: std::marker::PhantomPinned,
         };
         randomness.zeroize();
         k
@@ -92,8 +96,11 @@ impl Key for Key256 {
     where
         R: CryptoRng + RngCore,
     {
-        let mut k = Key256 { content: [0u8; 32] };
-        csprng.fill_bytes(&mut k.content);
+        let mut k = Key256 {
+            content: Zeroizing::new([0u8; 32]),
+            _marker: std::marker::PhantomPinned,
+        };
+        csprng.fill_bytes(k.content.deref_mut());
         k
     }
 
@@ -103,7 +110,10 @@ impl Key for Key256 {
     }
 
     fn from_slice(bytes: &mut [u8]) -> Self {
-        let mut k = Self { content: [0u8; 32] };
+        let mut k = Self {
+            content: Zeroizing::new([0u8; 32]),
+            _marker: std::marker::PhantomPinned,
+        };
 
         k.content.copy_from_slice(bytes);
         bytes.zeroize();
@@ -112,10 +122,17 @@ impl Key for Key256 {
     }
 }
 
+impl Zeroize for Key256 {
+    fn zeroize(&mut self) {
+        self.content.zeroize();
+    }
+}
+
 impl InsecureClone for Key256 {
     fn insecure_clone(&self) -> Self {
         return Self {
             content: self.content.clone(),
+            _marker: std::marker::PhantomPinned,
         };
     }
 }
@@ -124,7 +141,7 @@ impl KeyAccessor for Key256 {
     /// Get the content of the key
     /// This accessor in only available to `crypto-tk` crate.
     fn content(&self) -> &[u8] {
-        &self.content
+        self.content.deref()
     }
 }
 

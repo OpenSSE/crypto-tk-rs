@@ -1,6 +1,8 @@
 use std::ops::Bound::*;
 use std::ops::{Bound, RangeBounds};
 
+use zeroize::Zeroize;
+
 /// Structure encoding the domain of a range-constrained PRF.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RCPrfRange {
@@ -15,6 +17,7 @@ impl From<std::ops::Range<u64>> for RCPrfRange {
         RCPrfRange::from(range.start..=(range.end - 1))
     }
 }
+
 impl From<std::ops::RangeInclusive<u64>> for RCPrfRange {
     fn from(range: std::ops::RangeInclusive<u64>) -> Self {
         RCPrfRange { range }
@@ -34,6 +37,12 @@ impl RangeBounds<u64> for RCPrfRange {
 impl std::fmt::Display for RCPrfRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[{}, {}]", self.min(), self.max())
+    }
+}
+
+impl Zeroize for RCPrfRange {
+    fn zeroize(&mut self) {
+        self.range = 0..=0;
     }
 }
 

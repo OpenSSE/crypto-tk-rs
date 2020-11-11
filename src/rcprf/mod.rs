@@ -1,12 +1,14 @@
 //! Range-constrained PRF
 
+use std::pin::Pin;
+
 use crate::insecure_clone::private::InsecureClone;
 use crate::key::Key256;
 use crate::prg::KeyDerivationPrg;
 use crate::Prf;
 
 // use clear_on_drop::clear::Clear;
-// use zeroize::Zeroize;
+use zeroize::Zeroize;
 
 /// Range structure and functions for use with RCPRFs.
 pub mod rcprf_range;
@@ -61,6 +63,8 @@ fn get_child_node(
     }
 }
 
+#[derive(Zeroize)]
+#[zeroize(drop)]
 struct ConstrainedRCPrfInnerElement {
     prg: KeyDerivationPrg<Key256>,
     range: RCPrfRange,
@@ -68,6 +72,8 @@ struct ConstrainedRCPrfInnerElement {
     rcprf_height: u8,
 }
 
+#[derive(Zeroize)]
+#[zeroize(drop)]
 struct ConstrainedRCPrfLeafElement {
     prf: Prf,
     index: u64,
@@ -75,13 +81,15 @@ struct ConstrainedRCPrfLeafElement {
 }
 
 /// An *unconstrained* RCPrf object
+#[derive(Zeroize)]
+#[zeroize(drop)]
 pub struct RCPrf {
     root: ConstrainedRCPrfInnerElement,
 }
 
 /// A *constrained* RCPrf object (obtained after constraining a RCPrf - constrained or not)
 pub struct ConstrainedRCPrf {
-    elements: Vec<Box<dyn RCPrfElement>>,
+    elements: Vec<Pin<Box<dyn RCPrfElement>>>,
 }
 
 mod private {
@@ -177,7 +185,7 @@ pub trait TreeBasedPrf {
     fn tree_height(&self) -> u8;
 }
 
-trait RCPrfElement: TreeBasedPrf + RangePrf {
+trait RCPrfElement: TreeBasedPrf + RangePrf + Send + Sync + Zeroize {
     fn is_leaf(&self) -> bool;
     fn subtree_height(&self) -> u8;
 
@@ -229,7 +237,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfLeafElement {
         // here, we do have to copy the PRF
         // We do so by getting the key and copying it
         Ok(ConstrainedRCPrf {
-            elements: vec![Box::new(self.insecure_clone())],
+            elements: vec![Box::pin(self.insecure_clone())],
         })
     }
 }
@@ -423,7 +431,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
 
         if self.range() == *range {
             return Ok(ConstrainedRCPrf {
-                elements: vec![Box::new(self.insecure_clone())],
+                elements: vec![Box::pin(self.insecure_clone())],
             });
         }
 
@@ -502,7 +510,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
             };
 
             Ok(ConstrainedRCPrf {
-                elements: vec![Box::new(child_node)],
+                elements: vec![Box::pin(child_node)],
             })
         }
     }
@@ -649,6 +657,13 @@ impl RangePrf for ConstrainedRCPrf {
             self.elements[0].range().min(),
             self.elements[self.elements.len() - 1].range().max(),
         )
+    }
+}
+
+impl Zeroize for ConstrainedRCPrf {
+    fn zeroize(&mut self) {
+        // Elements are zeroized on drop
+        self.elements.drain(..);
     }
 }
 
