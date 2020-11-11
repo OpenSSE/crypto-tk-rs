@@ -12,6 +12,9 @@ categories = ["cryptography"]
 keywords = ["cryptography", "crypto-library"]
 license = "AGPL-3.0-or-later"
 
+[features]
+default = ["rayon"]
+
 [dev-dependencies]
 criterion = "0.3"
 
@@ -26,3 +29,4 @@ blake2b_simd = "^0.5.10"
 chacha20 = "^0.6.0"
 clear_on_drop = "^0.2.3"
 num-traits =  "^0.2.11"
+rayon = { version = "^1.5", optional = true }

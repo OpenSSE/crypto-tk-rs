@@ -111,6 +111,13 @@ mod private {
             &self,
             range: &RCPrfRange,
         ) -> Result<ConstrainedRCPrf, String>;
+
+        #[cfg(feature = "rayon")]
+        fn unchecked_par_eval_range(
+            &self,
+            range: &RCPrfRange,
+            outputs: &mut [&mut [u8]],
+        ) -> Result<(), String>;
     }
 }
 
@@ -156,6 +163,32 @@ pub trait RangePrf: private::UncheckedRangePrf {
             ));
         } else {
             self.unchecked_eval_range(range, outputs)
+        }
+    }
+
+    /// Evaluate the PRF on every value of the `range` in parallel and put the
+    /// result in `outputs` such that the i-th value of the range is put at the
+    /// i-th position of the output.
+    /// Returns an error when `range` is not contained in the PRF's range.    #[cfg(feature = "rayon")]
+    fn par_eval_range(
+        &self,
+        range: &RCPrfRange,
+        outputs: &mut [&mut [u8]],
+    ) -> Result<(), String> {
+        if !self.range().contains_range(range) {
+            Err(format!(
+                "Invalid evaluation range: {} is not contained in the valid range {}",
+                range,
+                self.range(),
+            ))
+        } else if range.width() != outputs.len() as u64 {
+            return Err(format!(
+                "Incompatible range width ({}) and outputs length ({}).",
+                range.width(),
+                outputs.len()
+            ));
+        } else {
+            self.unchecked_par_eval_range(range, outputs)
         }
     }
 
@@ -225,6 +258,16 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfLeafElement {
         debug_assert_eq!(range.min(), self.index);
         debug_assert_eq!(range.max(), self.index);
         self.eval(range.min(), &mut outputs[0])
+    }
+
+    #[cfg(feature = "rayon")]
+    fn unchecked_par_eval_range(
+        &self,
+        range: &RCPrfRange,
+        outputs: &mut [&mut [u8]],
+    ) -> Result<(), String> {
+        // there is no point in parallelizing here
+        self.unchecked_eval_range(range, outputs)
     }
 
     fn unchecked_constrain(
@@ -423,6 +466,109 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
         Ok(())
     }
 
+    #[cfg(feature = "rayon")]
+    fn unchecked_par_eval_range(
+        &self,
+        range: &RCPrfRange,
+        outputs: &mut [&mut [u8]],
+    ) -> Result<(), String> {
+        if self.subtree_height() > 2 {
+            let half_width = 1u64 << (self.subtree_height() - 2);
+
+            rayon::scope(move |s| {
+                let mut current = outputs;
+
+                // use scopes to avoid any mixups between left and right subtrees
+                {
+                    let left_range = RCPrfRange::new(
+                        self.range().min(),
+                        self.range().min() + half_width - 1,
+                    );
+
+                    match left_range.intersection(range) {
+                        None => (),
+                        Some(r) => {
+                            let r_width = r.width() as usize;
+                            let (mut left_slice, right_slice) =
+                                current.split_at_mut(r_width);
+                            current = right_slice;
+
+                            s.spawn(move |_| {
+                                let subkey = self.prg.derive_key(0);
+                                let left_child = ConstrainedRCPrfInnerElement {
+                                    prg: KeyDerivationPrg::from_key(subkey),
+                                    range: left_range,
+                                    subtree_height: self.subtree_height() - 1,
+                                    rcprf_height: self.rcprf_height,
+                                };
+                                left_child
+                                    .par_eval_range(&r, &mut left_slice)
+                                    .unwrap();
+                            });
+                        }
+                    }
+                }
+
+                {
+                    let right_range = RCPrfRange::new(
+                        self.range().min() + half_width,
+                        self.range().max(),
+                    );
+
+                    match right_range.intersection(range) {
+                        None => (),
+                        Some(r) => {
+                            // it is not necessary to spawn a new task here
+                            let subkey = self.prg.derive_key(1);
+                            let right_child = ConstrainedRCPrfInnerElement {
+                                prg: KeyDerivationPrg::from_key(subkey),
+                                range: right_range,
+                                subtree_height: self.subtree_height() - 1,
+                                rcprf_height: self.rcprf_height,
+                            };
+                            right_child
+                                .par_eval_range(&r, &mut current)
+                                .unwrap();
+                        }
+                    }
+                }
+            });
+        } else {
+            // we are getting a leaf
+            // do not parallelize this, it is not worth it
+            debug_assert!(range.width() <= 2);
+
+            let mut out_offset = 0usize;
+            if range.contains_leaf(self.range().min()) {
+                let subkey = self.prg.derive_key(0);
+
+                let child_node = ConstrainedRCPrfLeafElement {
+                    prf: Prf::from_key(subkey),
+                    index: range.min(),
+                    rcprf_height: self.rcprf_height,
+                };
+                child_node
+                    .unchecked_eval(self.range().min(), &mut outputs[0])?;
+                out_offset += 1;
+            }
+
+            if range.contains_leaf(self.range().max()) {
+                let subkey = self.prg.derive_key(1);
+
+                let child_node = ConstrainedRCPrfLeafElement {
+                    prf: Prf::from_key(subkey),
+                    index: range.max(),
+                    rcprf_height: self.rcprf_height,
+                };
+                child_node.unchecked_eval(
+                    self.range().max(),
+                    &mut outputs[out_offset],
+                )?;
+            }
+        }
+        Ok(())
+    }
+
     fn unchecked_constrain(
         &self,
         range: &RCPrfRange,
@@ -555,6 +701,15 @@ impl private::UncheckedRangePrf for RCPrf {
         self.root.unchecked_eval_range(range, outputs)
     }
 
+    #[cfg(feature = "rayon")]
+    fn unchecked_par_eval_range(
+        &self,
+        range: &RCPrfRange,
+        outputs: &mut [&mut [u8]],
+    ) -> Result<(), String> {
+        self.root.unchecked_par_eval_range(range, outputs)
+    }
+
     fn unchecked_constrain(
         &self,
         range: &RCPrfRange,
@@ -603,22 +758,45 @@ impl private::UncheckedRangePrf for ConstrainedRCPrf {
         range: &RCPrfRange,
         outputs: &mut [&mut [u8]],
     ) -> Result<(), String> {
-        let mut buffer_offset = 0usize;
+        let mut current = outputs;
         for elt in &self.elements {
             match elt.range().intersection(range) {
                 Some(r) => {
-                    let r_width = r.width();
-                    elt.eval_range(
-                        &r,
-                        &mut outputs
-                            [buffer_offset..buffer_offset + r_width as usize],
-                    )
-                    .unwrap();
-                    buffer_offset += r_width as usize;
+                    let r_width = r.width() as usize;
+                    let (mut left_slice, right_slice) =
+                        current.split_at_mut(r_width);
+                    current = right_slice;
+                    elt.eval_range(&r, &mut left_slice).unwrap();
                 }
                 None => (),
             }
         }
+        Ok(())
+    }
+
+    #[cfg(feature = "rayon")]
+    fn unchecked_par_eval_range(
+        &self,
+        range: &RCPrfRange,
+        outputs: &mut [&mut [u8]],
+    ) -> Result<(), String> {
+        rayon::scope(move |s| {
+            let mut current = outputs;
+            for elt in &self.elements {
+                match elt.range().intersection(range) {
+                    Some(r) => {
+                        let r_width = r.width() as usize;
+                        let (mut left_slice, right_slice) =
+                            current.split_at_mut(r_width);
+                        current = right_slice;
+                        s.spawn(move |_| {
+                            elt.eval_range(&r, &mut left_slice).unwrap();
+                        });
+                    }
+                    None => (),
+                }
+            }
+        });
         Ok(())
     }
 
@@ -735,8 +913,11 @@ mod tests {
             .collect();
 
         let mut outs = vec![[0u8; 16]; max_leaf_index(h) as usize + 1];
+        let mut par_outs = vec![[0u8; 16]; max_leaf_index(h) as usize + 1];
         let mut slice: Vec<&mut [u8]> =
             outs.iter_mut().map(|x| &mut x[..]).collect();
+        let mut par_slice: Vec<&mut [u8]> =
+            par_outs.iter_mut().map(|x| &mut x[..]).collect();
 
         // iterate over all the possible ranges
         for start in 0..=max_leaf_index(h) {
@@ -749,12 +930,23 @@ mod tests {
                     )
                     .unwrap();
 
-                let couple = direct_eval
+                rcprf
+                    .par_eval_range(
+                        &RCPrfRange::from(start..=end),
+                        &mut par_slice[0..range_width],
+                    )
+                    .unwrap();
+
+                let triplets = direct_eval
                     .iter()
                     .skip(start as usize)
                     .take(range_width)
-                    .zip(slice.iter());
-                couple.for_each(|(x, y)| assert_eq!(x, y));
+                    .zip(slice.iter())
+                    .zip(par_slice.iter());
+                triplets.for_each(|((x, y), z)| {
+                    assert_eq!(x, y);
+                    assert_eq!(x, z)
+                });
             }
         }
     }

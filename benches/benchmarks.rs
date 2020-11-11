@@ -115,8 +115,44 @@ mod rcprf_benches {
         rcprf_range_eval_bench!(16);
         rcprf_range_eval_bench!(32);
         rcprf_range_eval_bench!(512);
+        rcprf_range_eval_bench!(4096);
     }
-    criterion_group!(benches, rcprf_iter_eval, rcprf_range_eval);
+    pub fn rcprf_par_range_eval(c: &mut Criterion) {
+        macro_rules! rcprf_par_range_eval_bench {
+            ($size:expr) => {{
+                let rcprf = RCPrf::new(RCPRF_HEIGHT).unwrap();
+                let mut outs = vec![[0u8; 16]; $size];
+                let mut slice: Vec<&mut [u8]> =
+                    outs.iter_mut().map(|x| &mut x[..]).collect();
+
+                c.bench_function(
+                    &format!("rcprf_par_range_eval_width_{}", $size),
+                    |b| {
+                        b.iter(|| {
+                            rcprf
+                                .par_eval_range(
+                                    &RCPrfRange::from(0..$size),
+                                    &mut slice,
+                                )
+                                .unwrap();
+                        });
+                    },
+                );
+            }};
+        }
+
+        rcprf_par_range_eval_bench!(16);
+        rcprf_par_range_eval_bench!(32);
+        rcprf_par_range_eval_bench!(512);
+        rcprf_par_range_eval_bench!(4096);
+    }
+
+    criterion_group!(
+        benches,
+        rcprf_iter_eval,
+        rcprf_range_eval,
+        rcprf_par_range_eval
+    );
 }
 
 criterion_main!(
