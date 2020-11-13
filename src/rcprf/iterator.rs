@@ -11,22 +11,24 @@ impl Iterator for RCPrfIterator {
     type Item = Vec<u8>;
 
     fn next(&mut self) -> Option<Vec<u8>> {
-        if let Some(elt) = self.node_queue.pop_front() {
-            let mut result = vec![0u8; self.output_size];
+        if let Some(mut elt) = self.node_queue.pop_front() {
+            loop {
+                if elt.is_leaf() {
+                    let mut result = vec![0u8; self.output_size];
 
-            if elt.is_leaf() {
-                elt.eval(elt.range().min(), &mut result).unwrap();
-                Some(result)
-            } else {
-                // split the node in two
-                let (left, right) = elt.split_node();
+                    elt.eval(elt.range().min(), &mut result).unwrap();
+                    return Some(result);
+                } else {
+                    // split the node in two
+                    let (left, right) = elt.split_node();
 
-                // reinsert the node in the queue
-                // TODO: this could probably be improved using a loop. We use a "functional" approach for the moment
-                self.node_queue.push_front(right);
-                self.node_queue.push_front(left);
-                // and recall next on itself
-                self.next()
+                    // reinsert the node in the queue
+                    // TODO: this could probably be improved using a loop. We use a "functional" approach for the moment
+                    self.node_queue.push_front(right);
+                    // self.node_queue.push_front(left);
+                    // and recall next on itself
+                    elt = left;
+                }
             }
         } else {
             None
