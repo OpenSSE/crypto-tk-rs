@@ -147,11 +147,25 @@ mod rcprf_benches {
         rcprf_par_range_eval_bench!(4096);
     }
 
+    pub fn rcprf_iter_range_eval(c: &mut Criterion) {
+        let rcprf = RCPrf::new(RCPRF_HEIGHT).unwrap();
+
+        c.bench_function("rcprf_iter_range_eval", |b| {
+            b.iter(|| {
+                let _: Vec<Vec<u8>> = rcprf
+                    .iter_range(&RCPrfRange::from(0..4096), 16)
+                    .unwrap()
+                    .collect();
+            });
+        });
+    }
+
     criterion_group!(
         benches,
         rcprf_iter_eval,
         rcprf_range_eval,
-        rcprf_par_range_eval
+        rcprf_par_range_eval,
+        rcprf_iter_range_eval
     );
 }
 
