@@ -8,25 +8,24 @@ pub struct RCPrfIterator {
 }
 
 impl Iterator for RCPrfIterator {
-    type Item = Vec<u8>;
+    type Item = (u64, Vec<u8>);
 
-    fn next(&mut self) -> Option<Vec<u8>> {
+    fn next(&mut self) -> Option<Self::Item> {
         if let Some(mut elt) = self.node_queue.pop_front() {
             loop {
                 if elt.is_leaf() {
                     let mut result = vec![0u8; self.output_size];
-
-                    elt.eval(elt.range().min(), &mut result).unwrap();
-                    return Some(result);
+                    let x = elt.range().min();
+                    elt.eval(x, &mut result).unwrap();
+                    return Some((x, result));
                 } else {
                     // split the node in two
                     let (left, right) = elt.split_node();
 
                     // reinsert the node in the queue
-                    // TODO: this could probably be improved using a loop. We use a "functional" approach for the moment
                     self.node_queue.push_front(right);
-                    // self.node_queue.push_front(left);
-                    // and recall next on itself
+
+                    // and loop
                     elt = left;
                 }
             }
@@ -46,3 +45,31 @@ impl Iterator for RCPrfIterator {
         }
     }
 }
+
+impl DoubleEndedIterator for RCPrfIterator {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if let Some(mut elt) = self.node_queue.pop_back() {
+            loop {
+                if elt.is_leaf() {
+                    let mut result = vec![0u8; self.output_size];
+
+                    let x = elt.range().max();
+                    elt.eval(x, &mut result).unwrap();
+                    return Some((x, result));
+                } else {
+                    // split the node in two
+                    let (left, right) = elt.split_node();
+
+                    // reinsert the node in the queue
+                    self.node_queue.push_back(left);
+                    // and loop
+                    elt = right;
+                }
+            }
+        } else {
+            None
+        }
+    }
+}
+
+impl ExactSizeIterator for RCPrfIterator {}

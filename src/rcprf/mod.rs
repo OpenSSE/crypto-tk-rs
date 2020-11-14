@@ -402,9 +402,20 @@ mod tests {
                     .take(range_width)
                     .zip(constrained_eval.iter())
                     .zip(rcprf.iter_range(&range, 16).unwrap());
-                triplets.for_each(|((x, y), z)| {
+                triplets.for_each(|((x, y), (i, z))| {
                     assert_eq!(x, y);
                     assert_eq!(&x[..], &z[..])
+                });
+
+                let rev_couple = direct_eval
+                    .iter()
+                    .skip(start as usize)
+                    .take(range_width)
+                    .zip(start as u16..=end as u16)
+                    .rev()
+                    .zip(rcprf.iter_range(&range, 16).unwrap().rev());
+                rev_couple.for_each(|((x, i), (j, y))| {
+                    assert_eq!(&x[..], &y[..]);
                 });
             }
         }
