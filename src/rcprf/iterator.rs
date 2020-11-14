@@ -34,4 +34,15 @@ impl Iterator for RCPrfIterator {
             None
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        if self.node_queue.is_empty() {
+            (0, Some(0))
+        } else {
+            let s = (self.node_queue.back().unwrap().range().max()
+                - self.node_queue.front().unwrap().range().min()
+                + 1) as usize;
+            (s, Some(s))
+        }
+    }
 }
