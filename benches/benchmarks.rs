@@ -153,8 +153,9 @@ mod rcprf_benches {
         c.bench_function("rcprf_iter_range_eval", |b| {
             b.iter(|| {
                 let _: Vec<Vec<u8>> = rcprf
-                    .iter_range(&RCPrfRange::from(0..4096), 16)
+                    .index_value_iter_range(&RCPrfRange::from(0..4096), 16)
                     .unwrap()
+                    .map(|(_, v)| v)
                     .collect();
             });
         });
