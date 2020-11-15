@@ -1,0 +1,57 @@
+name: CI
+
+on: push
+
+jobs:
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v2
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - name: Build library
+        run: cargo build --release --all-features
+      - name: Run tests
+        run: cargo test --release --all-features
+  clippy:
+    name: Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v2
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          components: rustfmt
+      - name: Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+  rustfmt:
+    name: Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v2
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          components: rustfmt
+      - name: rustfmt
+        run: cargo fmt -- --check
+  # test:
+  #   name: Test the crypto-tk-rs library
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - run: cargo test --release --all-features
