@@ -12,7 +12,10 @@ pub struct RCPrfRange {
 impl From<std::ops::Range<u64>> for RCPrfRange {
     fn from(range: std::ops::Range<u64>) -> Self {
         if range.end == range.start {
-            panic!("Invalid empty input range");
+            panic!(
+                "Invalid empty input range ({} .. {})",
+                range.start, range.end
+            );
         }
         RCPrfRange::new(range.start, range.end - 1)
     }
