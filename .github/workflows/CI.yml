@@ -14,17 +14,17 @@ jobs:
           override: true
       - name: Clone repo
         uses: actions/checkout@v2
-
-  build:
-    name: Build the crypto-tk-rs library
-    needs: setup
-    runs-on: ubuntu-latest
-    steps:
       - run: cargo build --release --all-features
-
-  test:
-    name: Test the crypto-tk-rs library
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
       - run: cargo test --release --all-features
+  # build:
+  #   name: Build the crypto-tk-rs library
+  #   needs: setup
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - run: cargo build --release --all-features
+  # test:
+  #   name: Test the crypto-tk-rs library
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - run: cargo test --release --all-features
