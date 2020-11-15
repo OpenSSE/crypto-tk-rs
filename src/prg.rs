@@ -225,7 +225,7 @@ mod tests {
         prg.fill_pseudo_random_bytes(&mut v1);
         prg.fill_offset_pseudo_random_bytes(offset, &mut v2);
 
-        return v1[offset..] == v2[..];
+        v1[offset..] == v2[..]
     }
 
     #[test]
