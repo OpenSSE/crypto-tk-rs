@@ -4,7 +4,7 @@ on: push
 
 jobs:
   test:
-    name: Set environment Up
+    name: Unit tests
     runs-on: ubuntu-latest
     steps:
       - name: Clone repo
@@ -20,7 +20,7 @@ jobs:
       - name: Run tests
         run: cargo test --release --all-features
   clippy:
-    name: Build the crypto-tk-rs library
+    name: Linting
     runs-on: ubuntu-latest
     steps:
       - name: Clone repo
@@ -35,7 +35,7 @@ jobs:
       - name: Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
   rustfmt:
-    name: Build the crypto-tk-rs library
+    name: Formatting
     runs-on: ubuntu-latest
     steps:
       - name: Clone repo
