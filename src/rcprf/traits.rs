@@ -25,6 +25,11 @@ pub(crate) mod private {
         );
     }
 
+    pub(crate) type RCPrfElementPair = (
+        Pin<Box<dyn private::RCPrfElement>>,
+        Pin<Box<dyn private::RCPrfElement>>,
+    );
+
     pub(crate) trait RCPrfElement:
         TreeBasedPrf + RangePrf + Send + Sync + Zeroize
     {
@@ -39,12 +44,7 @@ pub(crate) mod private {
             get_child_node(self.tree_height(), leaf, node_depth)
         }
 
-        fn split_node(
-            &self,
-        ) -> (
-            Pin<Box<dyn private::RCPrfElement>>,
-            Pin<Box<dyn private::RCPrfElement>>,
-        );
+        fn split_node(&self) -> RCPrfElementPair;
     }
 }
 

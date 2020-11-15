@@ -1,4 +1,4 @@
-use crate::private::RCPrfElement;
+use crate::private::{RCPrfElement, RCPrfElementPair};
 use crate::rcprf::*;
 use crate::Prf;
 
@@ -28,12 +28,7 @@ impl RCPrfElement for ConstrainedRCPrfInnerElement {
         self.subtree_height
     }
 
-    fn split_node(
-        &self,
-    ) -> (
-        Pin<Box<dyn private::RCPrfElement>>,
-        Pin<Box<dyn private::RCPrfElement>>,
-    ) {
+    fn split_node(&self) -> RCPrfElementPair {
         let (subkey_left, subkey_right) = self.prg.derive_key_pair(0);
         if self.subtree_height > 2 {
             let half_width = self.range().width() / 2;

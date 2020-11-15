@@ -80,7 +80,9 @@ pub struct RCPrfParallelIterator {
     base: RCPrfIterator,
 }
 
+#[cfg(feature = "rayon")]
 impl RCPrfParallelIterator {
+    /// Create a new parallel iterator for RCPRFs from a regular one
     pub fn new(base: RCPrfIterator) -> Self {
         RCPrfParallelIterator { base }
     }

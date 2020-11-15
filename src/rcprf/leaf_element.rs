@@ -1,3 +1,4 @@
+use crate::private::RCPrfElementPair;
 use crate::rcprf::*;
 use crate::Prf;
 
@@ -26,12 +27,7 @@ impl private::RCPrfElement for ConstrainedRCPrfLeafElement {
         2
     }
 
-    fn split_node(
-        &self,
-    ) -> (
-        Pin<Box<dyn private::RCPrfElement>>,
-        Pin<Box<dyn private::RCPrfElement>>,
-    ) {
+    fn split_node(&self) -> RCPrfElementPair {
         panic!("Invalid tree state: trying to split a leaf!");
     }
 }
