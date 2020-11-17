@@ -1,6 +1,6 @@
 use criterion::BenchmarkId;
 use criterion::Throughput;
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::*;
 
 mod prf_benches {
     use super::*;
@@ -25,7 +25,11 @@ mod prf_benches {
         group.finish();
     }
 
-    criterion_group!(benches, prf);
+    criterion_group! {
+        name = benches;
+        config = Criterion::default().sample_size(500);
+        targets = prf
+    }
 }
 
 mod prg_benches {
@@ -37,6 +41,10 @@ mod prg_benches {
     pub fn prg(c: &mut Criterion) {
         let prg = Prg::new();
         let mut group = c.benchmark_group("prg_eval");
+        let plot_config =
+            PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
+        group.plot_config(plot_config);
+
         for size in &PRG_BENCH_SIZES {
             let mut out_buffer = vec![0u8; *size as usize];
             group.throughput(Throughput::Bytes(*size));
@@ -51,7 +59,11 @@ mod prg_benches {
         group.finish();
     }
 
-    criterion_group!(benches, prg);
+    criterion_group! {
+        name = benches;
+        config = Criterion::default().sample_size(500);
+        targets = prg
+    }
 }
 
 mod rcprf_benches {
@@ -67,6 +79,10 @@ mod rcprf_benches {
 
         let mut out = [0u8; 16];
         let mut group = c.benchmark_group("rcprf_mult_eval");
+        let plot_config =
+            PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
+        group.plot_config(plot_config);
+
         for size in &RCPRF_BENCH_SIZES {
             group.throughput(Throughput::Bytes(*size));
             group.bench_with_input(
@@ -93,6 +109,10 @@ mod rcprf_benches {
             outs.iter_mut().map(|x| &mut x[..]).collect();
 
         let mut group = c.benchmark_group("rcprf_range_eval");
+        let plot_config =
+            PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
+        group.plot_config(plot_config);
+
         for size in &RCPRF_BENCH_SIZES {
             group.throughput(Throughput::Bytes(*size));
             group.bench_with_input(
@@ -123,6 +143,10 @@ mod rcprf_benches {
             outs.iter_mut().map(|x| &mut x[..]).collect();
 
         let mut group = c.benchmark_group("rcprf_par_range_eval");
+        let plot_config =
+            PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
+        group.plot_config(plot_config);
+
         for size in &RCPRF_BENCH_SIZES {
             group.throughput(Throughput::Elements(*size));
             group.bench_with_input(
@@ -148,6 +172,10 @@ mod rcprf_benches {
         let rcprf = RCPrf::new(RCPRF_HEIGHT).unwrap();
 
         let mut group = c.benchmark_group("rcprf_iter_range_eval");
+        let plot_config =
+            PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
+        group.plot_config(plot_config);
+
         for size in &RCPRF_BENCH_SIZES {
             group.throughput(Throughput::Elements(*size));
             group.bench_with_input(
@@ -171,13 +199,11 @@ mod rcprf_benches {
         group.finish();
     }
 
-    criterion_group!(
-        benches,
-        rcprf_multiple_eval,
-        rcprf_range_eval,
-        rcprf_par_range_eval,
-        rcprf_iter_range_eval
-    );
+    criterion_group! {
+        name = benches;
+        config = Criterion::default().sample_size(500);
+        targets = rcprf_multiple_eval, rcprf_range_eval,rcprf_par_range_eval,rcprf_iter_range_eval
+    }
 }
 
 criterion_main!(
