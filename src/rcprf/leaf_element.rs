@@ -6,7 +6,7 @@ use zeroize::Zeroize;
 
 #[derive(Zeroize)]
 #[zeroize(drop)]
-pub(in crate::rcprf) struct ConstrainedRCPrfLeafElement {
+pub(crate) struct ConstrainedRCPrfLeafElement {
     pub prf: Prf,
     pub index: u64,
     pub rcprf_height: u8,
@@ -86,5 +86,23 @@ impl InsecureClone for ConstrainedRCPrfLeafElement {
 impl RangePrf for ConstrainedRCPrfLeafElement {
     fn range(&self) -> RCPrfRange {
         RCPrfRange::new(self.index, self.index)
+    }
+}
+
+impl SerializableCleartextContent for ConstrainedRCPrfLeafElement {
+    fn serialization_content_byte_size(&self) -> usize {
+        self.prf.serialization_content_byte_size()
+            + std::mem::size_of_val(&self.index)
+            + std::mem::size_of_val(&self.rcprf_height)
+    }
+    fn serialize_content(
+        &self,
+        writer: &mut dyn std::io::Write,
+    ) -> Result<usize, std::io::Error> {
+        writer.write_all(&self.rcprf_height.to_le_bytes())?;
+        writer.write_all(&self.index.to_le_bytes())?;
+        self.prf.serialize_content(writer)?;
+
+        Ok(self.serialization_content_byte_size())
     }
 }

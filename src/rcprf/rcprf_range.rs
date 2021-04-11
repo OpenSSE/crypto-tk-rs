@@ -1,3 +1,4 @@
+use crate::serialization::cleartext_serialization::*;
 use std::ops::Bound::*;
 use std::ops::{Bound, RangeBounds};
 
@@ -249,5 +250,20 @@ impl RCPrfRange {
         };
 
         cond1 && cond2
+    }
+}
+
+impl SerializableCleartextContent for RCPrfRange {
+    fn serialization_content_byte_size(&self) -> usize {
+        2 * std::mem::size_of::<u64>()
+    }
+    fn serialize_content(
+        &self,
+        writer: &mut dyn std::io::Write,
+    ) -> Result<usize, std::io::Error> {
+        writer.write_all(&self.min().to_le_bytes())?;
+        writer.write_all(&self.max().to_le_bytes())?;
+
+        Ok(self.serialization_content_byte_size())
     }
 }

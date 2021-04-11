@@ -28,6 +28,7 @@ pub mod key;
 pub mod prf;
 pub mod prg;
 pub mod rcprf;
+pub mod serialization;
 pub mod utils;
 
 // Export everything public modules

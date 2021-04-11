@@ -2,6 +2,7 @@
 
 use crate::insecure_clone::private::InsecureClone;
 use crate::key::{Key, Key256, KeyAccessor};
+use crate::serialization::cleartext_serialization::*;
 
 use clear_on_drop::clear::Clear;
 use zeroize::Zeroize;
@@ -97,5 +98,17 @@ impl Prf {
             written_bytes += out_length;
             i += 1;
         }
+    }
+}
+
+impl SerializableCleartextContent for Prf {
+    fn serialization_content_byte_size(&self) -> usize {
+        self.key.serialization_content_byte_size()
+    }
+    fn serialize_content(
+        &self,
+        writer: &mut dyn std::io::Write,
+    ) -> Result<usize, std::io::Error> {
+        self.key.serialize_content(writer)
     }
 }

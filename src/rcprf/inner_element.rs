@@ -6,7 +6,7 @@ use zeroize::Zeroize;
 
 #[derive(Zeroize)]
 #[zeroize(drop)]
-pub(in crate::rcprf) struct ConstrainedRCPrfInnerElement {
+pub(crate) struct ConstrainedRCPrfInnerElement {
     pub prg: KeyDerivationPrg<Key256>,
     pub range: RCPrfRange,
     pub subtree_height: u8,
@@ -422,5 +422,25 @@ impl InsecureClone for ConstrainedRCPrfInnerElement {
             range: self.range.clone(),
             subtree_height: self.subtree_height,
         }
+    }
+}
+
+impl SerializableCleartextContent for ConstrainedRCPrfInnerElement {
+    fn serialization_content_byte_size(&self) -> usize {
+        self.prg.serialization_content_byte_size()
+            + std::mem::size_of_val(&self.subtree_height)
+            + std::mem::size_of_val(&self.rcprf_height)
+            + self.range.serialization_content_byte_size()
+    }
+    fn serialize_content(
+        &self,
+        writer: &mut dyn std::io::Write,
+    ) -> Result<usize, std::io::Error> {
+        writer.write_all(&self.rcprf_height.to_le_bytes())?;
+        writer.write_all(&self.subtree_height.to_le_bytes())?;
+        self.range.serialize_content(writer)?;
+        self.prg.serialize_content(writer)?;
+
+        Ok(self.serialization_content_byte_size())
     }
 }

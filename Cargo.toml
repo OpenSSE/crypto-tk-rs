@@ -17,6 +17,8 @@ default = ["rayon"]
 
 [dev-dependencies]
 criterion = "0.3"
+strum = "0.20"
+strum_macros = "0.20"
 
 [[bench]]
 name = "benchmarks"
@@ -30,3 +32,4 @@ chacha20 = "^0.6.0"
 clear_on_drop = "^0.2.3"
 num-traits =  "^0.2.11"
 rayon = { version = "^1.5", optional = true }
+thiserror = "1.0"

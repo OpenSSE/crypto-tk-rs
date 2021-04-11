@@ -1,6 +1,7 @@
 //! Secret Keys
 
 use crate::insecure_clone::private::InsecureClone;
+use crate::serialization::cleartext_serialization::*;
 
 use rand::prelude::*;
 use std::ops::{Deref, DerefMut};
@@ -142,6 +143,22 @@ impl KeyAccessor for Key256 {
     /// This accessor in only available to `crypto-tk` crate.
     fn content(&self) -> &[u8] {
         self.content.deref()
+    }
+}
+
+impl SerializableCleartextContent for Key256 {
+    fn serialization_content_byte_size(&self) -> usize {
+        Key256::KEY_SIZE
+    }
+
+    fn serialize_content(
+        &self,
+        writer: &mut dyn std::io::Write,
+    ) -> Result<usize, std::io::Error> {
+        match writer.write_all(self.content()) {
+            Ok(_) => Ok(Key256::KEY_SIZE),
+            Err(e) => Err(e),
+        }
     }
 }
 

@@ -1,12 +1,13 @@
 //! Range-constrained PRF
 
-use std::collections::VecDeque;
 use std::iter::FromIterator;
 use std::pin::Pin;
+use std::{collections::VecDeque, ops::Deref};
 
 use crate::insecure_clone::private::InsecureClone;
 use crate::key::Key256;
 use crate::prg::KeyDerivationPrg;
+use crate::serialization::cleartext_serialization::*;
 
 // use clear_on_drop::clear::Clear;
 use zeroize::Zeroize;
@@ -331,6 +332,42 @@ impl ConstrainedRCPrf {
             node_queue: VecDeque::from_iter(self.elements.into_iter()),
             output_size: out_size,
         })
+    }
+}
+
+impl SerializableCleartextContent for RCPrf {
+    fn serialization_content_byte_size(&self) -> usize {
+        self.root.serialization_content_byte_size()
+    }
+    fn serialize_content(
+        &self,
+        writer: &mut dyn std::io::Write,
+    ) -> Result<usize, std::io::Error> {
+        self.root.serialize_content(writer)
+    }
+}
+
+impl SerializableCleartextContent for ConstrainedRCPrf {
+    fn serialization_content_byte_size(&self) -> usize {
+        std::mem::size_of::<u64>() // encode the number of elements on 64 bits
+            + self
+                .elements
+                .iter()
+                .map(|pinned_elt| pinned_elt.cleartext_serialization_length())
+                .sum::<usize>()
+    }
+    fn serialize_content(
+        &self,
+        writer: &mut dyn std::io::Write,
+    ) -> Result<usize, std::io::Error> {
+        let elt_len_64 = self.elements.len() as u64;
+        writer.write_all(&elt_len_64.to_le_bytes())?;
+        let written_bytes: usize = self
+            .elements
+            .iter()
+            .map(|elt| elt.serialize_cleartext(writer))
+            .sum::<Result<usize, std::io::Error>>()?;
+        Ok(written_bytes + std::mem::size_of::<u64>())
     }
 }
 

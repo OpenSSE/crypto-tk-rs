@@ -1,4 +1,5 @@
 use crate::rcprf::*;
+use crate::serialization::cleartext_serialization::*;
 
 pub(crate) mod private {
     use super::*;
@@ -31,7 +32,7 @@ pub(crate) mod private {
     );
 
     pub(crate) trait RCPrfElement:
-        TreeBasedPrf + RangePrf + Send + Sync + Zeroize
+        TreeBasedPrf + RangePrf + Send + Sync + Zeroize + SerializableCleartext
     {
         fn is_leaf(&self) -> bool;
         fn subtree_height(&self) -> u8;
