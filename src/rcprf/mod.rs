@@ -1,8 +1,8 @@
 //! Range-constrained PRF
 
+use std::collections::VecDeque;
 use std::iter::FromIterator;
 use std::pin::Pin;
-use std::{collections::VecDeque, ops::Deref};
 
 use crate::insecure_clone::private::InsecureClone;
 use crate::key::Key256;

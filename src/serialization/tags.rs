@@ -1,8 +1,6 @@
 use std::convert::TryFrom;
-use std::error::Error;
-use std::fmt;
 
-use thiserror::Error;
+use super::errors::*;
 
 #[cfg(test)]
 use {strum::IntoEnumIterator, strum_macros::EnumIter};
@@ -19,25 +17,6 @@ pub(crate) enum SerializationTag {
     ConstrainedRCPrfTag,
     ConstrainedRCPrfLeafElementTag,
     ConstrainedRCPrfInnerElementTag,
-}
-
-#[derive(Debug)]
-pub(crate) struct SerializationTagConversionError(u16);
-
-impl fmt::Display for SerializationTagConversionError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Invalid tag value ({})", self.0)
-    }
-}
-
-impl Error for SerializationTagConversionError {}
-
-#[derive(Debug, Error)]
-pub(crate) enum SerializationTagDeserializationError {
-    #[error("Tag Deserialization Error: {0}")]
-    ConversionError(#[from] SerializationTagConversionError),
-    #[error("Tag Deserialization Error: {0}")]
-    IOError(#[from] std::io::Error),
 }
 
 impl TryFrom<u16> for SerializationTag {
@@ -170,6 +149,14 @@ mod tests {
                     assert_ne!(t1 as u16, t2 as u16);
                 }
             }
+        }
+    }
+
+    #[test]
+    fn errors() {
+        match SerializationTag::try_from(25) {
+            Ok(_) => panic!("Should return an error"),
+            Err(_) => (),
         }
     }
 }

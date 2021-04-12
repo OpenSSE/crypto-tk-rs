@@ -31,9 +31,10 @@ pub mod rcprf;
 pub mod serialization;
 pub mod utils;
 
-// Export everything public modules
+// Export everything public in modules
 pub use crate::key::*;
 pub use crate::prf::*;
 pub use crate::prg::*;
 pub use crate::rcprf::*;
+pub use crate::serialization::*;
 pub use crate::utils::*;

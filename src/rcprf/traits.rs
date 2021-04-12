@@ -1,5 +1,4 @@
 use crate::rcprf::*;
-use crate::serialization::cleartext_serialization::*;
 
 pub(crate) mod private {
     use super::*;
