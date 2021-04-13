@@ -7,6 +7,7 @@ use {strum::IntoEnumIterator, strum_macros::EnumIter};
 
 use crate::{rcprf::*, Key, KeyDerivationPrg, Prf, Prg};
 
+/// Tag encoding the type of a serialized cryptographic object
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(test, derive(EnumIter))]
 pub(crate) enum SerializationTag {
@@ -57,6 +58,7 @@ impl TryFrom<u16> for SerializationTag {
 impl SerializationTag {
     pub const SERIALIZATION_SIZE: usize = 2;
 
+    /// Write the tag to an IO stream
     pub(crate) fn serialize_content(
         &self,
         writer: &mut dyn std::io::Write,
@@ -67,6 +69,7 @@ impl SerializationTag {
         Ok(SerializationTag::SERIALIZATION_SIZE)
     }
 
+    /// Read a tag from a byte stream (represented as an IO object)
     pub(crate) fn read_tag(
         reader: &mut dyn std::io::Read,
     ) -> Result<SerializationTag, SerializationTagDeserializationError> {
