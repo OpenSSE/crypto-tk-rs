@@ -70,6 +70,7 @@ impl SerializationTag {
     }
 
     /// Read a tag from a byte stream (represented as an IO object)
+    #[allow(dead_code)]
     pub(crate) fn read_tag(
         reader: &mut dyn std::io::Read,
     ) -> Result<SerializationTag, SerializationTagDeserializationError> {

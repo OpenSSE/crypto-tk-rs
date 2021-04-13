@@ -106,3 +106,23 @@ impl SerializableCleartextContent for ConstrainedRCPrfLeafElement {
         Ok(self.serialization_content_byte_size())
     }
 }
+
+impl DeserializableCleartextContent for ConstrainedRCPrfLeafElement {
+    fn deserialize_content(
+        reader: &mut dyn std::io::Read,
+    ) -> Result<Self, CleartextContentDeserializationError> {
+        let mut h_bytes = [0u8; 1];
+        reader.read_exact(&mut h_bytes)?;
+        let rcprf_height = u8::from_le_bytes(h_bytes);
+
+        let mut i_bytes = [0u8; 8];
+        reader.read_exact(&mut i_bytes)?;
+        let index = u64::from_le_bytes(i_bytes);
+
+        Ok(ConstrainedRCPrfLeafElement {
+            prf: Prf::deserialize_content(reader)?,
+            rcprf_height,
+            index,
+        })
+    }
+}

@@ -1,3 +1,4 @@
+use crate::errors::CleartextContentDeserializationError;
 use crate::serialization::cleartext_serialization::*;
 use std::ops::Bound::*;
 use std::ops::{Bound, RangeBounds};
@@ -265,5 +266,21 @@ impl SerializableCleartextContent for RCPrfRange {
         writer.write_all(&self.max().to_le_bytes())?;
 
         Ok(self.serialization_content_byte_size())
+    }
+}
+
+impl DeserializableCleartextContent for RCPrfRange {
+    fn deserialize_content(
+        reader: &mut dyn std::io::Read,
+    ) -> Result<Self, CleartextContentDeserializationError> {
+        let mut min_bytes = [0u8; 8];
+        reader.read_exact(&mut min_bytes)?;
+        let min = u64::from_le_bytes(min_bytes);
+
+        let mut max_bytes = [0u8; 8];
+        reader.read_exact(&mut max_bytes)?;
+        let max = u64::from_le_bytes(max_bytes);
+
+        Ok(RCPrfRange::new(min, max))
     }
 }

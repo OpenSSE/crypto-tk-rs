@@ -8,6 +8,7 @@ use crate::insecure_clone::private::InsecureClone;
 use crate::key::Key256;
 use crate::prg::KeyDerivationPrg;
 use crate::serialization::cleartext_serialization::*;
+use crate::serialization::errors::*;
 
 // use clear_on_drop::clear::Clear;
 use zeroize::Zeroize;
@@ -347,6 +348,16 @@ impl SerializableCleartextContent for RCPrf {
     }
 }
 
+impl DeserializableCleartextContent for RCPrf {
+    fn deserialize_content(
+        reader: &mut dyn std::io::Read,
+    ) -> Result<Self, CleartextContentDeserializationError> {
+        Ok(RCPrf {
+            root: ConstrainedRCPrfInnerElement::deserialize_content(reader)?,
+        })
+    }
+}
+
 impl SerializableCleartextContent for ConstrainedRCPrf {
     fn serialization_content_byte_size(&self) -> usize {
         std::mem::size_of::<u64>() // encode the number of elements on 64 bits
@@ -368,6 +379,24 @@ impl SerializableCleartextContent for ConstrainedRCPrf {
             .map(|elt| elt.serialize_cleartext(writer))
             .sum::<Result<usize, std::io::Error>>()?;
         Ok(written_bytes + std::mem::size_of::<u64>())
+    }
+}
+
+impl DeserializableCleartextContent for ConstrainedRCPrf {
+    fn deserialize_content(
+        reader: &mut dyn std::io::Read,
+    ) -> Result<Self, CleartextContentDeserializationError> {
+        let mut elt_count_bytes = [0u8; 8];
+        reader.read_exact(&mut elt_count_bytes)?;
+        let elt_count = u64::from_le_bytes(elt_count_bytes);
+
+        let elements = vec![];
+
+        for i in 0..elt_count {
+            todo!("Unimplemented")
+        }
+
+        Ok(ConstrainedRCPrf { elements })
     }
 }
 

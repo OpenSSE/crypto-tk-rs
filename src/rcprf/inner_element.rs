@@ -1,3 +1,4 @@
+use crate::errors::CleartextContentDeserializationError;
 use crate::private::{RCPrfElement, RCPrfElementPair};
 use crate::rcprf::*;
 use crate::Prf;
@@ -442,5 +443,28 @@ impl SerializableCleartextContent for ConstrainedRCPrfInnerElement {
         self.prg.serialize_content(writer)?;
 
         Ok(self.serialization_content_byte_size())
+    }
+}
+
+impl DeserializableCleartextContent for ConstrainedRCPrfInnerElement {
+    fn deserialize_content(
+        reader: &mut dyn std::io::Read,
+    ) -> Result<Self, CleartextContentDeserializationError> {
+        let mut h_bytes = [0u8; 1];
+        reader.read_exact(&mut h_bytes)?;
+        let rcprf_height = u8::from_le_bytes(h_bytes);
+
+        let mut sub_h_bytes = [0u8; 1];
+        reader.read_exact(&mut sub_h_bytes)?;
+        let subtree_height = u8::from_le_bytes(sub_h_bytes);
+
+        let range = RCPrfRange::deserialize_content(reader)?;
+
+        Ok(ConstrainedRCPrfInnerElement {
+            prg: KeyDerivationPrg::<Key256>::deserialize_content(reader)?,
+            rcprf_height,
+            subtree_height,
+            range,
+        })
     }
 }

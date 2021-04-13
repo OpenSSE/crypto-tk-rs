@@ -2,6 +2,7 @@
 
 use crate::insecure_clone::private::InsecureClone;
 use crate::serialization::cleartext_serialization::*;
+use crate::serialization::errors::*;
 
 use rand::prelude::*;
 use std::ops::{Deref, DerefMut};
@@ -162,6 +163,19 @@ impl SerializableCleartextContent for Key256 {
     }
 }
 
+impl DeserializableCleartextContent for Key256 {
+    fn deserialize_content(
+        reader: &mut dyn std::io::Read,
+    ) -> Result<Self, CleartextContentDeserializationError> {
+        let mut k = Key256 {
+            content: Zeroizing::new([0u8; 32]),
+            _marker: std::marker::PhantomPinned,
+        };
+
+        reader.read_exact(&mut (*k.content))?;
+        Ok(k)
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;

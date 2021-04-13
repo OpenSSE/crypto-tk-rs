@@ -3,6 +3,7 @@
 use crate::insecure_clone::private::InsecureClone;
 use crate::key::{Key, Key256, KeyAccessor};
 use crate::serialization::cleartext_serialization::*;
+use crate::serialization::errors::*;
 
 use chacha20::cipher::{
     NewStreamCipher, SyncStreamCipher, SyncStreamCipherSeek,
@@ -235,6 +236,27 @@ impl<KeyType: Key> SerializableCleartextContent for KeyDerivationPrg<KeyType> {
         writer: &mut dyn std::io::Write,
     ) -> Result<usize, std::io::Error> {
         self.prg.serialize_content(writer)
+    }
+}
+
+impl DeserializableCleartextContent for Prg {
+    fn deserialize_content(
+        reader: &mut dyn std::io::Read,
+    ) -> Result<Self, CleartextContentDeserializationError> {
+        Ok(Prg::from_key(Key256::deserialize_content(reader)?))
+    }
+}
+
+impl<KeyType: Key> DeserializableCleartextContent
+    for KeyDerivationPrg<KeyType>
+{
+    fn deserialize_content(
+        reader: &mut dyn std::io::Read,
+    ) -> Result<Self, CleartextContentDeserializationError> {
+        Ok(KeyDerivationPrg::<KeyType> {
+            prg: Prg::deserialize_content(reader)?,
+            _marker: std::marker::PhantomData,
+        })
     }
 }
 

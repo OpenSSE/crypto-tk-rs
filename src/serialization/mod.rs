@@ -7,3 +7,6 @@ pub mod errors;
 pub(crate) mod cleartext_serialization;
 /// Tags identifying the different object types
 pub(crate) mod tags;
+
+#[cfg(test)]
+mod tests;
