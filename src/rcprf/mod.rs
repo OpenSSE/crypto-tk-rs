@@ -1,5 +1,6 @@
 //! Range-constrained PRF
 
+use either::Either;
 use std::collections::VecDeque;
 use std::iter::FromIterator;
 use std::pin::Pin;
@@ -390,10 +391,28 @@ impl DeserializableCleartextContent for ConstrainedRCPrf {
         reader.read_exact(&mut elt_count_bytes)?;
         let elt_count = u64::from_le_bytes(elt_count_bytes);
 
-        let elements = vec![];
+        let mut elements = vec![];
+
+        type EitherLoc =
+            Either<ConstrainedRCPrfLeafElement, ConstrainedRCPrfInnerElement>;
 
         for i in 0..elt_count {
-            todo!("Unimplemented")
+            let elt: Pin<Box<dyn private::RCPrfElement>> =
+                match deserialize_either_cleartext::<
+                    ConstrainedRCPrfLeafElement,
+                    ConstrainedRCPrfInnerElement,
+                >(reader)
+                .map_err(|e| {
+                    CleartextContentDeserializationError::ContentError(
+                        format!("Issue when deserializing the {}-th element of the constrained RCPRF: {}", i, e)
+                            ,
+                    )
+                })? {
+                    EitherLoc::Left(leaf) => Box::pin(leaf),
+                    EitherLoc::Right(inner) => Box::pin(inner),
+                };
+
+            elements.push(elt);
         }
 
         Ok(ConstrainedRCPrf { elements })

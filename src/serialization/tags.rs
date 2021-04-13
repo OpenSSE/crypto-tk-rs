@@ -10,7 +10,7 @@ use crate::{rcprf::*, Key, KeyDerivationPrg, Prf, Prg};
 /// Tag encoding the type of a serialized cryptographic object
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(test, derive(EnumIter))]
-pub(crate) enum SerializationTag {
+pub enum SerializationTag {
     PrfTag = 1,
     PrgTag,
     KeyDerivationPrgTag,

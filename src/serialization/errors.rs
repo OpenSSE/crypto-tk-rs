@@ -44,7 +44,7 @@ pub enum CleartextDeserializationError {
     TagError(#[from] SerializationTagDeserializationError),
     /// Serialization tag not matching the deserialized object's type
     #[error("Deserialized tag do not match the object type")]
-    InvalidTagError(),
+    InvalidTagError(crate::serialization::tags::SerializationTag),
     /// Error during the content's deserialization
     #[error(transparent)]
     ContentDeserializationError(#[from] CleartextContentDeserializationError),

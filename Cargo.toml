@@ -33,3 +33,4 @@ clear_on_drop = "^0.2.3"
 num-traits =  "^0.2.11"
 rayon = { version = "^1.5", optional = true }
 thiserror = "1.0"
+either = "1.6"

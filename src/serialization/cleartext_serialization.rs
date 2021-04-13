@@ -3,6 +3,8 @@ use crate::tags::SerializationTag;
 use super::errors::*;
 use super::tags::*;
 
+use either::Either;
+
 pub(crate) trait SerializableCleartextContent {
     fn serialization_content_byte_size(&self) -> usize;
     fn serialize_content(
@@ -50,7 +52,7 @@ pub(crate) trait DeserializableCleartext:
         let tag = SerializationTag::read_tag(reader)?;
 
         if tag != Self::serialization_tag() {
-            Err(CleartextDeserializationError::InvalidTagError())
+            Err(CleartextDeserializationError::InvalidTagError(tag))
         } else {
             Ok(Self::deserialize_content(reader)?)
         }
@@ -59,4 +61,23 @@ pub(crate) trait DeserializableCleartext:
 impl<T> DeserializableCleartext for T where
     T: DeserializableCleartextContent + SerializationTaggedType
 {
+}
+
+pub(crate) fn deserialize_either_cleartext<U, V>(
+    reader: &mut dyn std::io::Read,
+) -> Result<Either<U, V>, CleartextDeserializationError>
+where
+    U: DeserializableCleartext,
+    V: DeserializableCleartext,
+{
+    let tag = SerializationTag::read_tag(reader)?;
+
+    let u_tag: SerializationTag = U::serialization_tag();
+    let v_tag: SerializationTag = V::serialization_tag();
+
+    match tag {
+        t if t == u_tag => Ok(Either::Left(U::deserialize_content(reader)?)),
+        t if t == v_tag => Ok(Either::Right(V::deserialize_content(reader)?)),
+        _ => Err(CleartextDeserializationError::InvalidTagError(tag)),
+    }
 }

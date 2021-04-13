@@ -94,8 +94,9 @@ fn constrained_rcprf_serialization() {
             let constrained_rcprf = rcprf.constrain(&range).unwrap();
 
             let mut ser_buffer = vec![];
-            let written_bytes =
-                rcprf.serialize_cleartext(&mut ser_buffer).unwrap();
+            let written_bytes = constrained_rcprf
+                .serialize_cleartext(&mut ser_buffer)
+                .unwrap();
 
             assert_eq!(written_bytes, ser_buffer.len());
             let mut cursor = Cursor::new(ser_buffer);
