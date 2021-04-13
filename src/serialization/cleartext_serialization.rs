@@ -1,7 +1,7 @@
 use crate::tags::SerializationTag;
 
 use super::errors::*;
-use super::tags::SerializableTagged;
+use super::tags::*;
 
 pub(crate) trait SerializableCleartextContent {
     fn serialization_content_byte_size(&self) -> usize;
@@ -18,7 +18,7 @@ pub(crate) trait DeserializableCleartextContent: Sized {
 }
 
 pub(crate) trait SerializableCleartext:
-    SerializableCleartextContent + SerializableTagged
+    SerializableCleartextContent + SerializationTagged
 {
     fn cleartext_serialization_length(&self) -> usize {
         self.serialization_content_byte_size()
@@ -37,22 +37,26 @@ pub(crate) trait SerializableCleartext:
     }
 }
 impl<T> SerializableCleartext for T where
-    T: SerializableCleartextContent + SerializableTagged
+    T: SerializableCleartextContent + SerializationTagged
 {
 }
 
 pub(crate) trait DeserializableCleartext:
-    DeserializableCleartextContent + SerializableTagged
+    DeserializableCleartextContent + SerializationTaggedType
 {
     fn deserialize_cleartext(
         reader: &mut dyn std::io::Read,
     ) -> Result<Self, CleartextDeserializationError> {
         let tag = SerializationTag::read_tag(reader)?;
 
-        Ok(Self::deserialize_content(reader)?)
+        if tag != Self::serialization_tag() {
+            Err(CleartextDeserializationError::InvalidTagError())
+        } else {
+            Ok(Self::deserialize_content(reader)?)
+        }
     }
 }
 impl<T> DeserializableCleartext for T where
-    T: DeserializableCleartextContent + SerializableTagged
+    T: DeserializableCleartextContent + SerializationTaggedType
 {
 }

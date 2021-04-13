@@ -81,49 +81,59 @@ impl SerializationTag {
     }
 }
 
-pub(crate) trait SerializableTagged {
-    fn serialization_tag(&self) -> SerializationTag;
+pub(crate) trait SerializationTaggedType {
+    fn serialization_tag() -> SerializationTag;
 }
 
-impl SerializableTagged for Prf {
-    fn serialization_tag(&self) -> SerializationTag {
+impl SerializationTaggedType for Prf {
+    fn serialization_tag() -> SerializationTag {
         SerializationTag::PrfTag
     }
 }
 
-impl SerializableTagged for Prg {
-    fn serialization_tag(&self) -> SerializationTag {
+impl SerializationTaggedType for Prg {
+    fn serialization_tag() -> SerializationTag {
         SerializationTag::PrgTag
     }
 }
 
-impl<T: Key> SerializableTagged for KeyDerivationPrg<T> {
-    fn serialization_tag(&self) -> SerializationTag {
+impl<T: Key> SerializationTaggedType for KeyDerivationPrg<T> {
+    fn serialization_tag() -> SerializationTag {
         SerializationTag::KeyDerivationPrgTag
     }
 }
 
-impl SerializableTagged for RCPrf {
-    fn serialization_tag(&self) -> SerializationTag {
+impl SerializationTaggedType for RCPrf {
+    fn serialization_tag() -> SerializationTag {
         SerializationTag::RCPrfTag
     }
 }
 
-impl SerializableTagged for ConstrainedRCPrf {
-    fn serialization_tag(&self) -> SerializationTag {
+impl SerializationTaggedType for ConstrainedRCPrf {
+    fn serialization_tag() -> SerializationTag {
         SerializationTag::ConstrainedRCPrfTag
     }
 }
 
-impl SerializableTagged for leaf_element::ConstrainedRCPrfLeafElement {
-    fn serialization_tag(&self) -> SerializationTag {
+impl SerializationTaggedType for leaf_element::ConstrainedRCPrfLeafElement {
+    fn serialization_tag() -> SerializationTag {
         SerializationTag::ConstrainedRCPrfLeafElementTag
     }
 }
 
-impl SerializableTagged for inner_element::ConstrainedRCPrfInnerElement {
-    fn serialization_tag(&self) -> SerializationTag {
+impl SerializationTaggedType for inner_element::ConstrainedRCPrfInnerElement {
+    fn serialization_tag() -> SerializationTag {
         SerializationTag::ConstrainedRCPrfInnerElementTag
+    }
+}
+
+pub(crate) trait SerializationTagged {
+    fn serialization_tag(&self) -> SerializationTag;
+}
+
+impl<T: SerializationTaggedType> SerializationTagged for T {
+    fn serialization_tag(&self) -> SerializationTag {
+        T::serialization_tag()
     }
 }
 

@@ -42,6 +42,9 @@ pub enum CleartextDeserializationError {
     /// Error during the tag's deserialization
     #[error(transparent)]
     TagError(#[from] SerializationTagDeserializationError),
+    /// Serialization tag not matching the deserialized object's type
+    #[error("Deserialized tag do not match the object type")]
+    InvalidTagError(),
     /// Error during the content's deserialization
     #[error(transparent)]
     ContentDeserializationError(#[from] CleartextContentDeserializationError),
