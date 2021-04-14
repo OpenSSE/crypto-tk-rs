@@ -1,13 +1,13 @@
 use crate::rcprf::*;
 use std::collections::VecDeque;
 
-/// The output generator (as an iterator) for RCPRF
-pub struct RCPrfIterator {
-    pub(crate) node_queue: VecDeque<Pin<Box<dyn private::RCPrfElement>>>,
+/// The output generator (as an iterator) for RcPrf
+pub struct RcPrfIterator {
+    pub(crate) node_queue: VecDeque<Pin<Box<dyn private::RcPrfElement>>>,
     pub(crate) output_size: usize,
 }
 
-impl Iterator for RCPrfIterator {
+impl Iterator for RcPrfIterator {
     type Item = (u64, Vec<u8>);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -46,7 +46,7 @@ impl Iterator for RCPrfIterator {
     }
 }
 
-impl DoubleEndedIterator for RCPrfIterator {
+impl DoubleEndedIterator for RcPrfIterator {
     fn next_back(&mut self) -> Option<Self::Item> {
         if let Some(mut elt) = self.node_queue.pop_back() {
             loop {
@@ -72,30 +72,30 @@ impl DoubleEndedIterator for RCPrfIterator {
     }
 }
 
-impl ExactSizeIterator for RCPrfIterator {}
+impl ExactSizeIterator for RcPrfIterator {}
 
-/// Parallel iterator for RCPRFs
+/// Parallel iterator for RcPrfs
 #[cfg(feature = "rayon")]
-pub struct RCPrfParallelIterator {
-    base: RCPrfIterator,
+pub struct RcPrfParallelIterator {
+    base: RcPrfIterator,
 }
 
 #[cfg(feature = "rayon")]
-impl RCPrfParallelIterator {
-    /// Create a new parallel iterator for RCPRFs from a regular one
-    pub fn new(base: RCPrfIterator) -> Self {
-        RCPrfParallelIterator { base }
+impl RcPrfParallelIterator {
+    /// Create a new parallel iterator for RcPrfs from a regular one
+    pub fn new(base: RcPrfIterator) -> Self {
+        RcPrfParallelIterator { base }
     }
 }
 
-/// Parallel iteration for RCPRFs
+/// Parallel iteration for RcPrfs
 pub mod parallel_iterator {
     use super::*;
     use rayon::iter::plumbing::*;
     use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 
-    impl ParallelIterator for RCPrfParallelIterator {
-        type Item = <RCPrfIterator as Iterator>::Item;
+    impl ParallelIterator for RcPrfParallelIterator {
+        type Item = <RcPrfIterator as Iterator>::Item;
 
         fn drive_unindexed<C>(self, consumer: C) -> C::Result
         where
@@ -109,7 +109,7 @@ pub mod parallel_iterator {
             Some(self.base.len())
         }
     }
-    impl IndexedParallelIterator for RCPrfParallelIterator {
+    impl IndexedParallelIterator for RcPrfParallelIterator {
         fn len(&self) -> usize {
             // <Self as ExactSizeIterator>::len(self)
             self.base.len()
@@ -127,7 +127,7 @@ pub mod parallel_iterator {
         }
     }
 
-    impl Producer for RCPrfIterator {
+    impl Producer for RcPrfIterator {
         type Item = <Self as Iterator>::Item;
         type IntoIter = Self;
 
@@ -140,11 +140,11 @@ pub mod parallel_iterator {
             let capacity =
                 self.node_queue.front().unwrap().tree_height() as usize;
             let mut left_deque =
-                VecDeque::<Pin<Box<dyn private::RCPrfElement>>>::with_capacity(
+                VecDeque::<Pin<Box<dyn private::RcPrfElement>>>::with_capacity(
                     capacity,
                 );
             let mut right_deque =
-                VecDeque::<Pin<Box<dyn private::RCPrfElement>>>::with_capacity(
+                VecDeque::<Pin<Box<dyn private::RcPrfElement>>>::with_capacity(
                     capacity,
                 );
 
@@ -163,10 +163,10 @@ pub mod parallel_iterator {
                     // Yet, this is elegant and the asymptotic complexity is
                     // not affected.
                     let left_subtree = elt
-                        .constrain(&RCPrfRange::from(elt.range().min()..leaf))
+                        .constrain(&RcPrfRange::from(elt.range().min()..leaf))
                         .unwrap();
                     let right_subtree = elt
-                        .constrain(&RCPrfRange::from(leaf..=elt.range().max()))
+                        .constrain(&RcPrfRange::from(leaf..=elt.range().max()))
                         .unwrap();
 
                     left_subtree
@@ -184,11 +184,11 @@ pub mod parallel_iterator {
             });
 
             (
-                RCPrfIterator {
+                RcPrfIterator {
                     node_queue: left_deque,
                     output_size: self.output_size,
                 },
-                RCPrfIterator {
+                RcPrfIterator {
                     node_queue: right_deque,
                     output_size: self.output_size,
                 },

@@ -1,8 +1,6 @@
 //! Range-constrained PRF
 
 use either::Either;
-use std::collections::VecDeque;
-use std::iter::FromIterator;
 use std::pin::Pin;
 
 use crate::insecure_clone::private::InsecureClone;
@@ -14,17 +12,17 @@ use crate::serialization::errors::*;
 // use clear_on_drop::clear::Clear;
 use zeroize::Zeroize;
 
-/// Range structure and functions for use with RCPRFs.
+/// Range structure and functions for use with RcPrfs.
 pub mod rcprf_range;
-/// Traits used to describe RCPRFs.
+/// Traits used to describe RcPrfs.
 pub mod traits;
 
-/// Nodes of the tree-based RCPRF.
+/// Nodes of the tree-based RcPrf.
 pub(crate) mod inner_element;
-/// Leaves of the tree-based RCPRF.
+/// Leaves of the tree-based RcPrf.
 pub(crate) mod leaf_element;
 
-/// All the generators for the RCPRF
+/// All the generators for the RcPrf
 pub mod iterator;
 
 use crate::inner_element::*;
@@ -43,15 +41,15 @@ pub use crate::traits::*;
 
 // Type encoding a choice of child in a binary tree.
 #[derive(Clone, Copy, Debug)]
-pub(crate) enum RCPrfTreeNodeChild {
+pub(crate) enum RcPrfTreeNodeChild {
     LeftChild = 0,
     RightChild = 1,
 }
 
-/// Maximum tree height of a RCPRF tree
+/// Maximum tree height of a RcPrf tree
 pub const MAX_HEIGHT: u8 = 65;
 
-/// Returns the maximum leaf index for a RCPRF using a tree of height `height`. It returns 0 for a tree of height 0 and 2^64-1 for a `height` larger or equal to `MAX_HEIGHT` (65)
+/// Returns the maximum leaf index for a RcPrf using a tree of height `height`. It returns 0 for a tree of height 0 and 2^64-1 for a `height` larger or equal to `MAX_HEIGHT` (65)
 pub const fn max_leaf_index(height: u8) -> u64 {
     if height == 0 {
         return 0;
@@ -66,7 +64,7 @@ fn get_child_node(
     height: u8,
     leaf_index: u64,
     node_depth: u8,
-) -> RCPrfTreeNodeChild {
+) -> RcPrfTreeNodeChild {
     debug_assert!(height >= node_depth + 2);
     // the -2 term comes from two facts:
     // - the minimum valid tree height is 1 (single node)
@@ -74,38 +72,38 @@ fn get_child_node(
     let mask = 1u64 << (height - node_depth - 2);
 
     if (leaf_index & mask) == 0 {
-        RCPrfTreeNodeChild::LeftChild
+        RcPrfTreeNodeChild::LeftChild
     } else {
-        RCPrfTreeNodeChild::RightChild
+        RcPrfTreeNodeChild::RightChild
     }
 }
 
-/// An *unconstrained* RCPrf object
+/// An *unconstrained* RcPrf object
 #[derive(Zeroize)]
 #[zeroize(drop)]
-pub struct RCPrf {
-    root: ConstrainedRCPrfInnerElement,
+pub struct RcPrf {
+    root: ConstrainedRcPrfInnerElement,
 }
 
-/// A *constrained* RCPrf object (obtained after constraining a RCPrf - constrained or not)
-pub struct ConstrainedRCPrf {
-    elements: Vec<Pin<Box<dyn private::RCPrfElement>>>,
+/// A *constrained* RcPrf object (obtained after constraining a RcPrf - constrained or not)
+pub struct ConstrainedRcPrf {
+    elements: Vec<Pin<Box<dyn private::RcPrfElement>>>,
 }
 
-impl TreeBasedPrf for RCPrf {
+impl TreeBasedPrf for RcPrf {
     fn tree_height(&self) -> u8 {
         self.root.tree_height()
     }
 }
 
-impl private::UncheckedRangePrf for RCPrf {
+impl private::UncheckedRangePrf for RcPrf {
     fn unchecked_eval(&self, leaf: u64, output: &mut [u8]) {
         self.root.unchecked_eval(leaf, output)
     }
 
     fn unchecked_eval_range(
         &self,
-        range: &RCPrfRange,
+        range: &RcPrfRange,
         outputs: &mut [&mut [u8]],
     ) {
         self.root.unchecked_eval_range(range, outputs)
@@ -114,7 +112,7 @@ impl private::UncheckedRangePrf for RCPrf {
     #[cfg(feature = "rayon")]
     fn unchecked_par_eval_range(
         &self,
-        range: &RCPrfRange,
+        range: &RcPrfRange,
         outputs: &mut [&mut [u8]],
     ) {
         self.root.unchecked_par_eval_range(range, outputs)
@@ -122,69 +120,69 @@ impl private::UncheckedRangePrf for RCPrf {
 
     fn unchecked_constrain(
         &self,
-        range: &RCPrfRange,
-    ) -> Result<ConstrainedRCPrf, String> {
+        range: &RcPrfRange,
+    ) -> Result<ConstrainedRcPrf, String> {
         self.root.unchecked_constrain(range)
     }
 }
-impl RangePrf for RCPrf {
-    fn range(&self) -> RCPrfRange {
+impl RangePrf for RcPrf {
+    fn range(&self) -> RcPrfRange {
         self.root.range()
     }
 }
 
-impl RCPrf {
-    /// Returns a new RCPrf based on a tree of height `height`, with a random
+impl RcPrf {
+    /// Returns a new RcPrf based on a tree of height `height`, with a random
     /// root.
     pub fn new(height: u8) -> Result<Self, String> {
         if height > MAX_HEIGHT {
             return Err(format!(
-                "RCPRF height is too large ({}). The maximum height is {}.",
+                "RcPrf height is too large ({}). The maximum height is {}.",
                 height, MAX_HEIGHT
             ));
         }
-        Ok(RCPrf {
-            root: ConstrainedRCPrfInnerElement {
+        Ok(RcPrf {
+            root: ConstrainedRcPrfInnerElement {
                 prg: KeyDerivationPrg::new(),
                 rcprf_height: height,
-                range: RCPrfRange::from(0..=max_leaf_index(height)),
+                range: RcPrfRange::from(0..=max_leaf_index(height)),
                 subtree_height: height,
             },
         })
     }
 
     /// Returns an iterator of (`index`,`value`) pairs such that `value` is the
-    /// evaluation of the RCPRF on `index`.
+    /// evaluation of the RcPrf on `index`.
     /// The values generated by this iterator are vectors of `output_width`
     /// bytes
     pub fn index_value_iter_range(
         &self,
-        range: &RCPrfRange,
+        range: &RcPrfRange,
         output_width: usize,
-    ) -> Result<iterator::RCPrfIterator, String> {
+    ) -> Result<iterator::RcPrfIterator, String> {
         let constrained_rcprf = self.constrain(range)?;
 
         Ok(constrained_rcprf.into_index_value_iter(output_width))
     }
 
     /// Returns a parallel iterator of (`index`,`value`) pairs such that
-    /// `value` is the evaluation of the RCPRF on `index`. This iterator
+    /// `value` is the evaluation of the RcPrf on `index`. This iterator
     /// is to be used with the `rayon` crate.
     /// The values generated by this iterator are vectors of `output_width`
     /// bytes
     #[cfg(feature = "rayon")]
     pub fn index_value_par_iter_range(
         &self,
-        range: &RCPrfRange,
+        range: &RcPrfRange,
         output_width: usize,
-    ) -> Result<iterator::RCPrfParallelIterator, String> {
+    ) -> Result<iterator::RcPrfParallelIterator, String> {
         let constrained_rcprf = self.constrain(range)?;
 
         Ok(constrained_rcprf.into_index_value_par_iter(output_width))
     }
 }
 
-impl private::UncheckedRangePrf for ConstrainedRCPrf {
+impl private::UncheckedRangePrf for ConstrainedRcPrf {
     fn unchecked_eval(&self, x: u64, output: &mut [u8]) {
         self.elements
             .iter()
@@ -195,7 +193,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrf {
 
     fn unchecked_eval_range(
         &self,
-        range: &RCPrfRange,
+        range: &RcPrfRange,
         outputs: &mut [&mut [u8]],
     ) {
         let mut current = outputs;
@@ -213,7 +211,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrf {
     #[cfg(feature = "rayon")]
     fn unchecked_par_eval_range(
         &self,
-        range: &RCPrfRange,
+        range: &RcPrfRange,
         outputs: &mut [&mut [u8]],
     ) {
         rayon::scope(move |s| {
@@ -234,9 +232,9 @@ impl private::UncheckedRangePrf for ConstrainedRCPrf {
 
     fn unchecked_constrain(
         &self,
-        range: &RCPrfRange,
-    ) -> Result<ConstrainedRCPrf, String> {
-        let mut constrained_rcprf = ConstrainedRCPrf {
+        range: &RcPrfRange,
+    ) -> Result<ConstrainedRcPrf, String> {
+        let mut constrained_rcprf = ConstrainedRcPrf {
             elements: Vec::new(),
         };
 
@@ -252,33 +250,33 @@ impl private::UncheckedRangePrf for ConstrainedRCPrf {
     }
 }
 
-impl TreeBasedPrf for ConstrainedRCPrf {
+impl TreeBasedPrf for ConstrainedRcPrf {
     fn tree_height(&self) -> u8 {
         debug_assert!(!self.elements.is_empty());
         self.elements[0].tree_height()
     }
 }
 
-impl RangePrf for ConstrainedRCPrf {
-    fn range(&self) -> RCPrfRange {
-        RCPrfRange::new(
+impl RangePrf for ConstrainedRcPrf {
+    fn range(&self) -> RcPrfRange {
+        RcPrfRange::new(
             self.elements[0].range().min(),
             self.elements[self.elements.len() - 1].range().max(),
         )
     }
 }
 
-impl Zeroize for ConstrainedRCPrf {
+impl Zeroize for ConstrainedRcPrf {
     fn zeroize(&mut self) {
         // Elements are zeroized on drop
         self.elements.drain(..);
     }
 }
 
-impl ConstrainedRCPrf {
+impl ConstrainedRcPrf {
     fn merge(
         &mut self,
-        mut merged_rcprf: ConstrainedRCPrf,
+        mut merged_rcprf: ConstrainedRcPrf,
     ) -> Result<(), String> {
         // only proceed if the ranges are consecutive
 
@@ -302,26 +300,26 @@ impl ConstrainedRCPrf {
             return Ok(());
         }
         Err(format!(
-            "Ranges of the RCPRFs to be merged are not consecutive: {} and {}",
+            "Ranges of the RcPrfs to be merged are not consecutive: {} and {}",
             self.range(),
             merged_rcprf.range()
         ))
     }
 
-    /// Transform the constrained RCPrf into an iterator that produces pairs of
+    /// Transform the constrained RcPrf into an iterator that produces pairs of
     /// index and evaluation value for that index.
     /// Values produced by that iterator are vectors of size `out_size`.
     pub fn into_index_value_iter(
         self,
         out_size: usize,
-    ) -> iterator::RCPrfIterator {
-        iterator::RCPrfIterator {
-            node_queue: VecDeque::from_iter(self.elements.into_iter()),
+    ) -> iterator::RcPrfIterator {
+        iterator::RcPrfIterator {
+            node_queue: self.elements.into_iter().collect(),
             output_size: out_size,
         }
     }
 
-    /// Transform the constrained RCPrf into a parallel iterator that can be
+    /// Transform the constrained RcPrf into a parallel iterator that can be
     /// used with the `rayon` crate, and which produces pairs of index and
     /// evaluation value for that index.
     /// Values produced by that iterator are vectors of size `out_size`.
@@ -329,15 +327,15 @@ impl ConstrainedRCPrf {
     pub fn into_index_value_par_iter(
         self,
         out_size: usize,
-    ) -> iterator::RCPrfParallelIterator {
-        iterator::RCPrfParallelIterator::new(iterator::RCPrfIterator {
-            node_queue: VecDeque::from_iter(self.elements.into_iter()),
+    ) -> iterator::RcPrfParallelIterator {
+        iterator::RcPrfParallelIterator::new(iterator::RcPrfIterator {
+            node_queue: self.elements.into_iter().collect(),
             output_size: out_size,
         })
     }
 }
 
-impl SerializableCleartextContent for RCPrf {
+impl SerializableCleartextContent for RcPrf {
     fn serialization_content_byte_size(&self) -> usize {
         self.root.serialization_content_byte_size()
     }
@@ -349,17 +347,17 @@ impl SerializableCleartextContent for RCPrf {
     }
 }
 
-impl DeserializableCleartextContent for RCPrf {
+impl DeserializableCleartextContent for RcPrf {
     fn deserialize_content(
         reader: &mut dyn std::io::Read,
     ) -> Result<Self, CleartextContentDeserializationError> {
-        Ok(RCPrf {
-            root: ConstrainedRCPrfInnerElement::deserialize_content(reader)?,
+        Ok(RcPrf {
+            root: ConstrainedRcPrfInnerElement::deserialize_content(reader)?,
         })
     }
 }
 
-impl SerializableCleartextContent for ConstrainedRCPrf {
+impl SerializableCleartextContent for ConstrainedRcPrf {
     fn serialization_content_byte_size(&self) -> usize {
         std::mem::size_of::<u64>() // encode the number of elements on 64 bits
             + self
@@ -383,7 +381,7 @@ impl SerializableCleartextContent for ConstrainedRCPrf {
     }
 }
 
-impl DeserializableCleartextContent for ConstrainedRCPrf {
+impl DeserializableCleartextContent for ConstrainedRcPrf {
     fn deserialize_content(
         reader: &mut dyn std::io::Read,
     ) -> Result<Self, CleartextContentDeserializationError> {
@@ -394,13 +392,13 @@ impl DeserializableCleartextContent for ConstrainedRCPrf {
         let mut elements = vec![];
 
         type EitherLoc =
-            Either<ConstrainedRCPrfLeafElement, ConstrainedRCPrfInnerElement>;
+            Either<ConstrainedRcPrfLeafElement, ConstrainedRcPrfInnerElement>;
 
         for i in 0..elt_count {
-            let elt: Pin<Box<dyn private::RCPrfElement>> =
+            let elt: Pin<Box<dyn private::RcPrfElement>> =
                 match deserialize_either_cleartext::<
-                    ConstrainedRCPrfLeafElement,
-                    ConstrainedRCPrfInnerElement,
+                    ConstrainedRcPrfLeafElement,
+                    ConstrainedRcPrfInnerElement,
                 >(reader)
                 .map_err(|e| {
                     CleartextContentDeserializationError::ContentError(
@@ -415,7 +413,7 @@ impl DeserializableCleartextContent for ConstrainedRCPrf {
             elements.push(elt);
         }
 
-        Ok(ConstrainedRCPrf { elements })
+        Ok(ConstrainedRcPrf { elements })
     }
 }
 
@@ -442,7 +440,7 @@ mod tests {
     fn rcprf_range_consistency() {
         let h = 6u8;
 
-        let rcprf = RCPrf::new(h).unwrap();
+        let rcprf = RcPrf::new(h).unwrap();
 
         let direct_eval: Vec<[u8; 16]> = (0..=max_leaf_index(h))
             .map(|x| {
@@ -466,14 +464,14 @@ mod tests {
                 let range_width = (end - start + 1) as usize;
                 rcprf
                     .eval_range(
-                        &RCPrfRange::from(start..=end),
+                        &RcPrfRange::from(start..=end),
                         &mut slice[0..range_width],
                     )
                     .unwrap();
 
                 rcprf
                     .par_eval_range(
-                        &RCPrfRange::from(start..=end),
+                        &RcPrfRange::from(start..=end),
                         &mut par_slice[0..range_width],
                     )
                     .unwrap();
@@ -496,7 +494,7 @@ mod tests {
     fn rcprf_constrain_consistency() {
         let h = 6u8;
 
-        let rcprf = RCPrf::new(h).unwrap();
+        let rcprf = RcPrf::new(h).unwrap();
 
         let direct_eval: Vec<[u8; 16]> = (0..=max_leaf_index(h))
             .map(|x| {
@@ -511,7 +509,7 @@ mod tests {
         for start in 0..=max_leaf_index(h) {
             for end in start..=max_leaf_index(h) {
                 let range_width = (end - start + 1) as usize;
-                let range = RCPrfRange::new(start, end);
+                let range = RcPrfRange::new(start, end);
                 let constrained_rcprf = rcprf.constrain(&range).unwrap();
 
                 let constrained_eval: Vec<[u8; 16]> = (start..=end)
@@ -558,10 +556,10 @@ mod tests {
 
     #[test]
     fn rcprf_errors() {
-        assert!(!RCPrf::new(MAX_HEIGHT + 1).is_ok());
+        assert!(!RcPrf::new(MAX_HEIGHT + 1).is_ok());
 
         let h = 8u8;
-        let rcprf = RCPrf::new(h).unwrap();
+        let rcprf = RcPrf::new(h).unwrap();
         let mut output = [0u8; 16];
         assert!(!rcprf.eval(max_leaf_index(h) + 1, &mut output).is_ok());
 
@@ -573,7 +571,7 @@ mod tests {
         // out of range error
         assert!(!rcprf
             .eval_range(
-                &RCPrfRange::from(
+                &RcPrfRange::from(
                     max_leaf_index(h)
                         ..(max_leaf_index(h) + OUT_VEC_SIZE as u64)
                 ),
@@ -583,7 +581,7 @@ mod tests {
 
         // invalid vector size
         assert!(!rcprf
-            .eval_range(&RCPrfRange::from(2..3), &mut slice)
+            .eval_range(&RcPrfRange::from(2..3), &mut slice)
             .is_ok());
     }
 }

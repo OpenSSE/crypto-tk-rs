@@ -63,14 +63,14 @@ fn key_derivation_prg_serialization() {
 
 #[test]
 fn rcprf_serialization() {
-    let rcprf = RCPrf::new(8).unwrap();
+    let rcprf = RcPrf::new(8).unwrap();
 
     let mut ser_buffer = vec![];
     let written_bytes = rcprf.serialize_cleartext(&mut ser_buffer).unwrap();
 
     assert_eq!(written_bytes, ser_buffer.len());
     let mut cursor = Cursor::new(ser_buffer);
-    let deser_rcprf = RCPrf::deserialize_cleartext(&mut cursor).unwrap();
+    let deser_rcprf = RcPrf::deserialize_cleartext(&mut cursor).unwrap();
 
     let mut out1 = [0u8; 32];
     let mut out2 = [0u8; 32];
@@ -85,12 +85,12 @@ fn rcprf_serialization() {
 fn constrained_rcprf_serialization() {
     let h = 6u8;
 
-    let rcprf = RCPrf::new(h).unwrap();
+    let rcprf = RcPrf::new(h).unwrap();
 
     // iterate over all the possible ranges
     for start in 0..=max_leaf_index(h) {
         for end in start..=max_leaf_index(h) {
-            let range = RCPrfRange::new(start, end);
+            let range = RcPrfRange::new(start, end);
             let constrained_rcprf = rcprf.constrain(&range).unwrap();
 
             let mut ser_buffer = vec![];
@@ -101,7 +101,7 @@ fn constrained_rcprf_serialization() {
             assert_eq!(written_bytes, ser_buffer.len());
             let mut cursor = Cursor::new(ser_buffer);
             let deser_constrained_rcprf =
-                ConstrainedRCPrf::deserialize_cleartext(&mut cursor).unwrap();
+                ConstrainedRcPrf::deserialize_cleartext(&mut cursor).unwrap();
 
             let constrained_eval_0: Vec<[u8; 16]> = (start..=end)
                 .map(|x| {

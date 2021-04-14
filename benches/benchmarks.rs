@@ -69,16 +69,15 @@ mod prg_benches {
 mod rcprf_benches {
     use super::*;
     use crypto_tk_rs::rcprf::*;
-    use crypto_tk_rs::RCPrfRange;
 
     const RCPRF_BENCH_SIZES: [u64; 4] = [16, 32, 512, 4096];
 
     const RCPRF_HEIGHT: u8 = 48;
     pub fn rcprf_multiple_eval(c: &mut Criterion) {
-        let rcprf = RCPrf::new(RCPRF_HEIGHT).unwrap();
+        let rcprf = RcPrf::new(RCPRF_HEIGHT).unwrap();
 
         let mut out = [0u8; 16];
-        let mut group = c.benchmark_group("rcprf_mult_eval");
+        let mut group = c.benchmark_group("RcPrf_mult_eval");
         let plot_config =
             PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
         group.plot_config(plot_config);
@@ -101,14 +100,14 @@ mod rcprf_benches {
         group.finish();
     }
     pub fn rcprf_range_eval(c: &mut Criterion) {
-        let rcprf = RCPrf::new(RCPRF_HEIGHT).unwrap();
+        let rcprf = RcPrf::new(RCPRF_HEIGHT).unwrap();
 
         let mut outs =
             vec![[0u8; 16]; *RCPRF_BENCH_SIZES.iter().max().unwrap() as usize];
         let mut slice: Vec<&mut [u8]> =
             outs.iter_mut().map(|x| &mut x[..]).collect();
 
-        let mut group = c.benchmark_group("rcprf_range_eval");
+        let mut group = c.benchmark_group("RcPrf_range_eval");
         let plot_config =
             PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
         group.plot_config(plot_config);
@@ -122,7 +121,7 @@ mod rcprf_benches {
                     b.iter(|| {
                         rcprf
                             .eval_range(
-                                &RCPrfRange::from(0..size as u64),
+                                &RcPrfRange::from(0..size as u64),
                                 &mut slice[..size as usize],
                             )
                             .unwrap();
@@ -135,14 +134,14 @@ mod rcprf_benches {
     }
 
     pub fn rcprf_par_range_eval(c: &mut Criterion) {
-        let rcprf = RCPrf::new(RCPRF_HEIGHT).unwrap();
+        let rcprf = RcPrf::new(RCPRF_HEIGHT).unwrap();
 
         let mut outs =
             vec![[0u8; 16]; *RCPRF_BENCH_SIZES.iter().max().unwrap() as usize];
         let mut slice: Vec<&mut [u8]> =
             outs.iter_mut().map(|x| &mut x[..]).collect();
 
-        let mut group = c.benchmark_group("rcprf_par_range_eval");
+        let mut group = c.benchmark_group("RcPrf_par_range_eval");
         let plot_config =
             PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
         group.plot_config(plot_config);
@@ -156,7 +155,7 @@ mod rcprf_benches {
                     b.iter(|| {
                         rcprf
                             .par_eval_range(
-                                &RCPrfRange::from(0..size as u64),
+                                &RcPrfRange::from(0..size as u64),
                                 &mut slice[..size as usize],
                             )
                             .unwrap();
@@ -169,9 +168,9 @@ mod rcprf_benches {
     }
 
     pub fn rcprf_iter_range_eval(c: &mut Criterion) {
-        let rcprf = RCPrf::new(RCPRF_HEIGHT).unwrap();
+        let rcprf = RcPrf::new(RCPRF_HEIGHT).unwrap();
 
-        let mut group = c.benchmark_group("rcprf_iter_range_eval");
+        let mut group = c.benchmark_group("RcPrf_iter_range_eval");
         let plot_config =
             PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
         group.plot_config(plot_config);
@@ -185,7 +184,7 @@ mod rcprf_benches {
                     b.iter(|| {
                         let _: Vec<Vec<u8>> = rcprf
                             .index_value_iter_range(
-                                &RCPrfRange::from(0..size as u64),
+                                &RcPrfRange::from(0..size as u64),
                                 16,
                             )
                             .unwrap()

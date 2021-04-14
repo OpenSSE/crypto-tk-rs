@@ -10,14 +10,15 @@ use crate::{rcprf::*, Key, KeyDerivationPrg, Prf, Prg};
 /// Tag encoding the type of a serialized cryptographic object
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(test, derive(EnumIter))]
+
 pub enum SerializationTag {
-    PrfTag = 1,
-    PrgTag,
-    KeyDerivationPrgTag,
-    RCPrfTag,
-    ConstrainedRCPrfTag,
-    ConstrainedRCPrfLeafElementTag,
-    ConstrainedRCPrfInnerElementTag,
+    Prf = 1,
+    Prg,
+    KeyDerivationPrg,
+    RcPrf,
+    ConstrainedRcPrf,
+    ConstrainedRcPrfLeafElement,
+    ConstrainedRcPrfInnerElement,
 }
 
 impl TryFrom<u16> for SerializationTag {
@@ -25,30 +26,22 @@ impl TryFrom<u16> for SerializationTag {
 
     fn try_from(v: u16) -> Result<Self, Self::Error> {
         match v {
-            x if x == SerializationTag::PrfTag as u16 => {
-                Ok(SerializationTag::PrfTag)
+            x if x == SerializationTag::Prf as u16 => Ok(SerializationTag::Prf),
+            x if x == SerializationTag::Prg as u16 => Ok(SerializationTag::Prg),
+            x if x == SerializationTag::KeyDerivationPrg as u16 => {
+                Ok(SerializationTag::KeyDerivationPrg)
             }
-            x if x == SerializationTag::PrgTag as u16 => {
-                Ok(SerializationTag::PrgTag)
+            x if x == SerializationTag::RcPrf as u16 => {
+                Ok(SerializationTag::RcPrf)
             }
-            x if x == SerializationTag::KeyDerivationPrgTag as u16 => {
-                Ok(SerializationTag::KeyDerivationPrgTag)
+            x if x == SerializationTag::ConstrainedRcPrf as u16 => {
+                Ok(SerializationTag::ConstrainedRcPrf)
             }
-            x if x == SerializationTag::RCPrfTag as u16 => {
-                Ok(SerializationTag::RCPrfTag)
+            x if x == SerializationTag::ConstrainedRcPrfLeafElement as u16 => {
+                Ok(SerializationTag::ConstrainedRcPrfLeafElement)
             }
-            x if x == SerializationTag::ConstrainedRCPrfTag as u16 => {
-                Ok(SerializationTag::ConstrainedRCPrfTag)
-            }
-            x if x
-                == SerializationTag::ConstrainedRCPrfLeafElementTag as u16 =>
-            {
-                Ok(SerializationTag::ConstrainedRCPrfLeafElementTag)
-            }
-            x if x
-                == SerializationTag::ConstrainedRCPrfInnerElementTag as u16 =>
-            {
-                Ok(SerializationTag::ConstrainedRCPrfInnerElementTag)
+            x if x == SerializationTag::ConstrainedRcPrfInnerElement as u16 => {
+                Ok(SerializationTag::ConstrainedRcPrfInnerElement)
             }
             _ => Err(SerializationTagConversionError(v)),
         }
@@ -88,43 +81,43 @@ pub(crate) trait SerializationTaggedType {
 
 impl SerializationTaggedType for Prf {
     fn serialization_tag() -> SerializationTag {
-        SerializationTag::PrfTag
+        SerializationTag::Prf
     }
 }
 
 impl SerializationTaggedType for Prg {
     fn serialization_tag() -> SerializationTag {
-        SerializationTag::PrgTag
+        SerializationTag::Prg
     }
 }
 
 impl<T: Key> SerializationTaggedType for KeyDerivationPrg<T> {
     fn serialization_tag() -> SerializationTag {
-        SerializationTag::KeyDerivationPrgTag
+        SerializationTag::KeyDerivationPrg
     }
 }
 
-impl SerializationTaggedType for RCPrf {
+impl SerializationTaggedType for RcPrf {
     fn serialization_tag() -> SerializationTag {
-        SerializationTag::RCPrfTag
+        SerializationTag::RcPrf
     }
 }
 
-impl SerializationTaggedType for ConstrainedRCPrf {
+impl SerializationTaggedType for ConstrainedRcPrf {
     fn serialization_tag() -> SerializationTag {
-        SerializationTag::ConstrainedRCPrfTag
+        SerializationTag::ConstrainedRcPrf
     }
 }
 
-impl SerializationTaggedType for leaf_element::ConstrainedRCPrfLeafElement {
+impl SerializationTaggedType for leaf_element::ConstrainedRcPrfLeafElement {
     fn serialization_tag() -> SerializationTag {
-        SerializationTag::ConstrainedRCPrfLeafElementTag
+        SerializationTag::ConstrainedRcPrfLeafElement
     }
 }
 
-impl SerializationTaggedType for inner_element::ConstrainedRCPrfInnerElement {
+impl SerializationTaggedType for inner_element::ConstrainedRcPrfInnerElement {
     fn serialization_tag() -> SerializationTag {
-        SerializationTag::ConstrainedRCPrfInnerElementTag
+        SerializationTag::ConstrainedRcPrfInnerElement
     }
 }
 
@@ -168,9 +161,6 @@ mod tests {
 
     #[test]
     fn errors() {
-        match SerializationTag::try_from(25) {
-            Ok(_) => panic!("Should return an error"),
-            Err(_) => (),
-        }
+        assert!(SerializationTag::try_from(25).is_err());
     }
 }

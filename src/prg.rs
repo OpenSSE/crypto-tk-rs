@@ -191,7 +191,7 @@ impl<KeyType: Key> KeyDerivationPrg<KeyType> {
 
         for i in 0..index_width {
             let range_begin = (i as usize) * KeyType::KEY_SIZE;
-            let range_end = (i + 1 as usize) * KeyType::KEY_SIZE;
+            let range_end = (i + 1) * KeyType::KEY_SIZE;
             res.push(KeyType::from_slice(&mut buf[range_begin..range_end]));
         }
 

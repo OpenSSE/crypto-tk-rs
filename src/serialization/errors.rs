@@ -22,7 +22,7 @@ pub enum SerializationTagDeserializationError {
     ConversionError(#[from] SerializationTagConversionError),
     /// IO error
     #[error("Tag Deserialization Error - IO Error: {0}")]
-    IOError(#[from] std::io::Error),
+    IoError(#[from] std::io::Error),
 }
 
 /// Error occuring during the deserialization of an object's content
@@ -33,7 +33,7 @@ pub enum CleartextContentDeserializationError {
     ContentError(String),
     /// IO error
     #[error("Cleartext Content Deserialization Error - IO Error: {0}")]
-    IOError(#[from] std::io::Error),
+    IoError(#[from] std::io::Error),
 }
 
 /// Error occuring during the deserialization of an object

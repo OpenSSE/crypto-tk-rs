@@ -8,29 +8,29 @@ pub(crate) mod private {
 
         fn unchecked_eval_range(
             &self,
-            range: &RCPrfRange,
+            range: &RcPrfRange,
             outputs: &mut [&mut [u8]],
         );
 
         fn unchecked_constrain(
             &self,
-            range: &RCPrfRange,
-        ) -> Result<ConstrainedRCPrf, String>;
+            range: &RcPrfRange,
+        ) -> Result<ConstrainedRcPrf, String>;
 
         #[cfg(feature = "rayon")]
         fn unchecked_par_eval_range(
             &self,
-            range: &RCPrfRange,
+            range: &RcPrfRange,
             outputs: &mut [&mut [u8]],
         );
     }
 
-    pub(crate) type RCPrfElementPair = (
-        Pin<Box<dyn private::RCPrfElement>>,
-        Pin<Box<dyn private::RCPrfElement>>,
+    pub(crate) type RcPrfElementPair = (
+        Pin<Box<dyn private::RcPrfElement>>,
+        Pin<Box<dyn private::RcPrfElement>>,
     );
 
-    pub(crate) trait RCPrfElement:
+    pub(crate) trait RcPrfElement:
         TreeBasedPrf + RangePrf + Send + Sync + Zeroize + SerializableCleartext
     {
         fn is_leaf(&self) -> bool;
@@ -40,18 +40,18 @@ pub(crate) mod private {
             &self,
             leaf: u64,
             node_depth: u8,
-        ) -> RCPrfTreeNodeChild {
+        ) -> RcPrfTreeNodeChild {
             get_child_node(self.tree_height(), leaf, node_depth)
         }
 
-        fn split_node(&self) -> RCPrfElementPair;
+        fn split_node(&self) -> RcPrfElementPair;
     }
 }
 
 /// Trait representing a PRF that can be evaluated on an integral range
 pub trait RangePrf: private::UncheckedRangePrf {
     /// Returns the range on which the PRF can be evaluated
-    fn range(&self) -> RCPrfRange;
+    fn range(&self) -> RcPrfRange;
 
     /// Evaluate the PRF on the input `x` and put the result in `output`.
     /// Returns an error when the input is out of the PRF range.
@@ -74,7 +74,7 @@ pub trait RangePrf: private::UncheckedRangePrf {
     /// Returns an error when `range` is not contained in the PRF's range.
     fn eval_range(
         &self,
-        range: &RCPrfRange,
+        range: &RcPrfRange,
         outputs: &mut [&mut [u8]],
     ) -> Result<(), String> {
         if !self.range().contains_range(range) {
@@ -101,7 +101,7 @@ pub trait RangePrf: private::UncheckedRangePrf {
     /// Returns an error when `range` is not contained in the PRF's range.    #[cfg(feature = "rayon")]
     fn par_eval_range(
         &self,
-        range: &RCPrfRange,
+        range: &RcPrfRange,
         outputs: &mut [&mut [u8]],
     ) -> Result<(), String> {
         if !self.range().contains_range(range) {
@@ -126,8 +126,8 @@ pub trait RangePrf: private::UncheckedRangePrf {
     /// Returns an error if `range` does not intersect the PRF's range
     fn constrain(
         &self,
-        range: &RCPrfRange,
-    ) -> Result<ConstrainedRCPrf, String> {
+        range: &RcPrfRange,
+    ) -> Result<ConstrainedRcPrf, String> {
         if !self.range().contains_range(range) {
             Err(format!(
                 "Invalid constrain range: {} is not contained in the valid range {}",

@@ -7,11 +7,11 @@ use zeroize::Zeroize;
 
 /// Structure encoding the domain of a range-constrained PRF.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct RCPrfRange {
+pub struct RcPrfRange {
     pub(crate) range: std::ops::RangeInclusive<u64>,
 }
 
-impl From<std::ops::Range<u64>> for RCPrfRange {
+impl From<std::ops::Range<u64>> for RcPrfRange {
     fn from(range: std::ops::Range<u64>) -> Self {
         if range.end == range.start {
             panic!(
@@ -19,19 +19,19 @@ impl From<std::ops::Range<u64>> for RCPrfRange {
                 range.start, range.end
             );
         }
-        RCPrfRange::new(range.start, range.end - 1)
+        RcPrfRange::new(range.start, range.end - 1)
     }
 }
 
-impl From<std::ops::RangeInclusive<u64>> for RCPrfRange {
+impl From<std::ops::RangeInclusive<u64>> for RcPrfRange {
     fn from(range: std::ops::RangeInclusive<u64>) -> Self {
-        RCPrfRange::new(*range.start(), *range.end())
+        RcPrfRange::new(*range.start(), *range.end())
 
-        // RCPrfRange { range }
+        // RcPrfRange { range }
     }
 }
 
-impl RangeBounds<u64> for RCPrfRange {
+impl RangeBounds<u64> for RcPrfRange {
     fn start_bound(&self) -> Bound<&u64> {
         self.range.start_bound()
     }
@@ -41,29 +41,29 @@ impl RangeBounds<u64> for RCPrfRange {
     }
 }
 
-impl std::fmt::Display for RCPrfRange {
+impl std::fmt::Display for RcPrfRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[{}, {}]", self.min(), self.max())
     }
 }
 
-impl Zeroize for RCPrfRange {
+impl Zeroize for RcPrfRange {
     fn zeroize(&mut self) {
         self.range = 0..=0;
     }
 }
 
-impl RCPrfRange {
+impl RcPrfRange {
     /// Creates a new range spanning from `min` to `max` (included).
     ///
     /// ```
     /// # extern crate crypto_tk_rs;
-    /// use crypto_tk_rs::RCPrfRange;
-    /// assert_eq!(RCPrfRange::new(4,6), RCPrfRange::from(4..7));
+    /// use crypto_tk_rs::RcPrfRange;
+    /// assert_eq!(RcPrfRange::new(4,6), RcPrfRange::from(4..7));
     /// ```
     pub fn new(min: u64, max: u64) -> Self {
         assert!(min <= max, "Invalid range input");
-        RCPrfRange { range: (min..=max) }
+        RcPrfRange { range: (min..=max) }
     }
 
     /// Returns the minimum value in the range
@@ -71,8 +71,8 @@ impl RCPrfRange {
     /// # Example
     /// ```
     /// # extern crate crypto_tk_rs;
-    /// use crypto_tk_rs::RCPrfRange;
-    /// let range = RCPrfRange::from(4..7);
+    /// use crypto_tk_rs::RcPrfRange;
+    /// let range = RcPrfRange::from(4..7);
     /// assert_eq!(range.min(), 4);
     /// ```
     ///
@@ -85,8 +85,8 @@ impl RCPrfRange {
     /// # Example
     /// ```
     /// # extern crate crypto_tk_rs;
-    /// use crypto_tk_rs::RCPrfRange;
-    /// let range = RCPrfRange::from(4..7);
+    /// use crypto_tk_rs::RcPrfRange;
+    /// let range = RcPrfRange::from(4..7);
     /// assert_eq!(range.max(), 6);
     /// ```
     ///
@@ -99,8 +99,8 @@ impl RCPrfRange {
     /// # Example
     /// ```
     /// # extern crate crypto_tk_rs;
-    /// use crypto_tk_rs::RCPrfRange;
-    /// let range = RCPrfRange::from(4..7);
+    /// use crypto_tk_rs::RcPrfRange;
+    /// let range = RcPrfRange::from(4..7);
     /// assert_eq!(range.width(), 3);
     /// ```
     pub fn width(&self) -> u64 {
@@ -112,8 +112,8 @@ impl RCPrfRange {
     /// # Example
     /// ```
     /// # extern crate crypto_tk_rs;
-    /// use crypto_tk_rs::RCPrfRange;
-    /// let range = RCPrfRange::from(4..7);
+    /// use crypto_tk_rs::RcPrfRange;
+    /// let range = RcPrfRange::from(4..7);
     /// assert!(!range.contains_leaf(3));
     /// assert!(range.contains_leaf(4));
     /// assert!(range.contains_leaf(5));
@@ -129,16 +129,16 @@ impl RCPrfRange {
     /// # Example
     /// ```
     /// # extern crate crypto_tk_rs;
-    /// use crypto_tk_rs::RCPrfRange;
-    /// let range = RCPrfRange::from(4..7);
+    /// use crypto_tk_rs::RcPrfRange;
+    /// let range = RcPrfRange::from(4..7);
     /// assert!(!range.intersects(&(2..3)));
     /// assert!(!range.intersects(&(2..4)));
     /// assert!(range.intersects(&(2..=4)));
-    /// assert!(range.intersects(&RCPrfRange::from(2..5)));
-    /// assert!(range.intersects(&RCPrfRange::from(5..6)));
-    /// assert!(range.intersects(&RCPrfRange::from(6..8)));
-    /// assert!(!range.intersects(&RCPrfRange::from(7..8)));
-    /// assert!(!range.intersects(&RCPrfRange::from(9..10)));
+    /// assert!(range.intersects(&RcPrfRange::from(2..5)));
+    /// assert!(range.intersects(&RcPrfRange::from(5..6)));
+    /// assert!(range.intersects(&RcPrfRange::from(6..8)));
+    /// assert!(!range.intersects(&RcPrfRange::from(7..8)));
+    /// assert!(!range.intersects(&RcPrfRange::from(9..10)));
     /// assert!(!range.intersects(&(0..0)));
     /// ```
     pub fn intersects<R>(&self, r: &R) -> bool
@@ -166,20 +166,20 @@ impl RCPrfRange {
     /// # Example
     /// ```
     /// # extern crate crypto_tk_rs;
-    /// use crypto_tk_rs::RCPrfRange;
-    /// let range = RCPrfRange::from(4..7);
+    /// use crypto_tk_rs::RcPrfRange;
+    /// let range = RcPrfRange::from(4..7);
     /// assert_eq!(range.intersection(&(2..3)), None);
     /// assert_eq!(range.intersection(&(2..4)), None);
-    /// assert_eq!(range.intersection(&(2..=4)), Some(RCPrfRange::new(4,4)));
-    /// assert_eq!(range.intersection(&RCPrfRange::from(2..5)), Some(RCPrfRange::new(4,4)));
-    /// assert_eq!(range.intersection(&RCPrfRange::from(5..6)), Some(RCPrfRange::new(5,5)));
-    /// assert_eq!(range.intersection(&RCPrfRange::from(6..8)), Some(RCPrfRange::new(6,6)));
-    /// assert_eq!(range.intersection(&RCPrfRange::from(7..8)), None);
-    /// assert_eq!(range.intersection(&RCPrfRange::from(9..10)), None);
+    /// assert_eq!(range.intersection(&(2..=4)), Some(RcPrfRange::new(4,4)));
+    /// assert_eq!(range.intersection(&RcPrfRange::from(2..5)), Some(RcPrfRange::new(4,4)));
+    /// assert_eq!(range.intersection(&RcPrfRange::from(5..6)), Some(RcPrfRange::new(5,5)));
+    /// assert_eq!(range.intersection(&RcPrfRange::from(6..8)), Some(RcPrfRange::new(6,6)));
+    /// assert_eq!(range.intersection(&RcPrfRange::from(7..8)), None);
+    /// assert_eq!(range.intersection(&RcPrfRange::from(9..10)), None);
     /// assert_eq!(range.intersection(&(0..0)), None);
     /// ```
     ///
-    pub fn intersection<R>(&self, r: &R) -> Option<RCPrfRange>
+    pub fn intersection<R>(&self, r: &R) -> Option<RcPrfRange>
     where
         R: RangeBounds<u64>,
     {
@@ -205,7 +205,7 @@ impl RCPrfRange {
         };
 
         if intersects {
-            Some(RCPrfRange::new(
+            Some(RcPrfRange::new(
                 r_start.max(self.min()),
                 r_end.min(self.max()),
             ))
@@ -218,9 +218,9 @@ impl RCPrfRange {
     /// # Example
     /// ```
     /// # extern crate crypto_tk_rs;
-    /// use crypto_tk_rs::RCPrfRange;
-    /// let range = RCPrfRange::from(4..7);
-    /// assert!(!range.contains_range(&RCPrfRange::from(2..3)));
+    /// use crypto_tk_rs::RcPrfRange;
+    /// let range = RcPrfRange::from(4..7);
+    /// assert!(!range.contains_range(&RcPrfRange::from(2..3)));
     /// assert!(!range.contains_range(&(2..4)));
     /// assert!(!range.contains_range(&(3..6)));
     /// assert!(range.contains_range(&(4..6)));
@@ -254,7 +254,7 @@ impl RCPrfRange {
     }
 }
 
-impl SerializableCleartextContent for RCPrfRange {
+impl SerializableCleartextContent for RcPrfRange {
     fn serialization_content_byte_size(&self) -> usize {
         2 * std::mem::size_of::<u64>()
     }
@@ -269,7 +269,7 @@ impl SerializableCleartextContent for RCPrfRange {
     }
 }
 
-impl DeserializableCleartextContent for RCPrfRange {
+impl DeserializableCleartextContent for RcPrfRange {
     fn deserialize_content(
         reader: &mut dyn std::io::Read,
     ) -> Result<Self, CleartextContentDeserializationError> {
@@ -281,6 +281,6 @@ impl DeserializableCleartextContent for RCPrfRange {
         reader.read_exact(&mut max_bytes)?;
         let max = u64::from_le_bytes(max_bytes);
 
-        Ok(RCPrfRange::new(min, max))
+        Ok(RcPrfRange::new(min, max))
     }
 }

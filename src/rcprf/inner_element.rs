@@ -1,5 +1,5 @@
 use crate::errors::CleartextContentDeserializationError;
-use crate::private::{RCPrfElement, RCPrfElementPair};
+use crate::private::{RcPrfElement, RcPrfElementPair};
 use crate::rcprf::*;
 use crate::Prf;
 
@@ -7,20 +7,20 @@ use zeroize::Zeroize;
 
 #[derive(Zeroize)]
 #[zeroize(drop)]
-pub(crate) struct ConstrainedRCPrfInnerElement {
+pub(crate) struct ConstrainedRcPrfInnerElement {
     pub prg: KeyDerivationPrg<Key256>,
-    pub range: RCPrfRange,
+    pub range: RcPrfRange,
     pub subtree_height: u8,
     pub rcprf_height: u8,
 }
 
-impl TreeBasedPrf for ConstrainedRCPrfInnerElement {
+impl TreeBasedPrf for ConstrainedRcPrfInnerElement {
     fn tree_height(&self) -> u8 {
         self.rcprf_height
     }
 }
 
-impl RCPrfElement for ConstrainedRCPrfInnerElement {
+impl RcPrfElement for ConstrainedRcPrfInnerElement {
     fn is_leaf(&self) -> bool {
         false
     }
@@ -29,24 +29,24 @@ impl RCPrfElement for ConstrainedRCPrfInnerElement {
         self.subtree_height
     }
 
-    fn split_node(&self) -> RCPrfElementPair {
+    fn split_node(&self) -> RcPrfElementPair {
         let (subkey_left, subkey_right) = self.prg.derive_key_pair(0);
         if self.subtree_height > 2 {
             let half_width = self.range().width() / 2;
-            let range_left = RCPrfRange::from(
+            let range_left = RcPrfRange::from(
                 self.range().min()..self.range().min() + half_width,
             );
-            let range_right = RCPrfRange::from(
+            let range_right = RcPrfRange::from(
                 self.range().min() + half_width..self.range().max(),
             );
             (
-                Box::pin(ConstrainedRCPrfInnerElement {
+                Box::pin(ConstrainedRcPrfInnerElement {
                     prg: KeyDerivationPrg::from_key(subkey_left),
                     range: range_left,
                     subtree_height: self.subtree_height() - 1,
                     rcprf_height: self.rcprf_height,
                 }),
-                Box::pin(ConstrainedRCPrfInnerElement {
+                Box::pin(ConstrainedRcPrfInnerElement {
                     prg: KeyDerivationPrg::from_key(subkey_right),
                     range: range_right,
                     subtree_height: self.subtree_height() - 1,
@@ -57,12 +57,12 @@ impl RCPrfElement for ConstrainedRCPrfInnerElement {
             debug_assert_eq!(self.subtree_height, 2);
 
             (
-                Box::pin(ConstrainedRCPrfLeafElement {
+                Box::pin(ConstrainedRcPrfLeafElement {
                     prf: Prf::from_key(subkey_left),
                     index: self.range().min(),
                     rcprf_height: self.rcprf_height,
                 }),
-                Box::pin(ConstrainedRCPrfLeafElement {
+                Box::pin(ConstrainedRcPrfLeafElement {
                     prf: Prf::from_key(subkey_right),
                     index: self.range().max(),
                     rcprf_height: self.rcprf_height,
@@ -72,7 +72,7 @@ impl RCPrfElement for ConstrainedRCPrfInnerElement {
     }
 }
 
-impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
+impl private::UncheckedRangePrf for ConstrainedRcPrfInnerElement {
     fn unchecked_eval(&self, leaf: u64, output: &mut [u8]) {
         let child = self
             .get_child_node(leaf, self.tree_height() - self.subtree_height());
@@ -80,7 +80,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
         let half_width = 1u64 << (self.subtree_height() - 2);
         let submin = self.range.min() + (child as u64) * half_width;
         let submax = submin + half_width;
-        let r = RCPrfRange::from(submin..submax);
+        let r = RcPrfRange::from(submin..submax);
         // println!("Subtree height {}", self.subtree_height());
         // println!("Half width {}", half_width);
 
@@ -92,13 +92,13 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
         // println!(
         //     "{}",
         //     match child {
-        //         RCPrfTreeNodeChild::LeftChild => "Left (0)",
+        //         RcPrfTreeNodeChild::LeftChild => "Left (0)",
         //         _ => "Right (1)",
         //     }
         // );
 
         if self.subtree_height > 2 {
-            let child_node = ConstrainedRCPrfInnerElement {
+            let child_node = ConstrainedRcPrfInnerElement {
                 prg: KeyDerivationPrg::from_key(subkey),
                 range: r,
                 subtree_height: self.subtree_height() - 1,
@@ -109,7 +109,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
             debug_assert_eq!(self.subtree_height, 2);
             debug_assert_eq!(half_width, 1);
 
-            let child_node = ConstrainedRCPrfLeafElement {
+            let child_node = ConstrainedRcPrfLeafElement {
                 prf: Prf::from_key(subkey),
                 index: r.min(),
                 rcprf_height: self.rcprf_height,
@@ -120,7 +120,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
 
     fn unchecked_eval_range(
         &self,
-        range: &RCPrfRange,
+        range: &RcPrfRange,
         outputs: &mut [&mut [u8]],
     ) {
         // range
@@ -134,7 +134,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
 
             // use scopes to avoid any mixups between left and right subtrees
             {
-                let left_range = RCPrfRange::new(
+                let left_range = RcPrfRange::new(
                     self.range().min(),
                     self.range().min() + half_width - 1,
                 );
@@ -143,7 +143,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
                     None => (),
                     Some(r) => {
                         let subkey = self.prg.derive_key(0);
-                        let left_child = ConstrainedRCPrfInnerElement {
+                        let left_child = ConstrainedRcPrfInnerElement {
                             prg: KeyDerivationPrg::from_key(subkey),
                             range: left_range,
                             subtree_height: self.subtree_height() - 1,
@@ -158,7 +158,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
             }
 
             {
-                let right_range = RCPrfRange::new(
+                let right_range = RcPrfRange::new(
                     self.range().min() + half_width,
                     self.range().max(),
                 );
@@ -167,7 +167,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
                     None => (),
                     Some(r) => {
                         let subkey = self.prg.derive_key(1);
-                        let right_child = ConstrainedRCPrfInnerElement {
+                        let right_child = ConstrainedRcPrfInnerElement {
                             prg: KeyDerivationPrg::from_key(subkey),
                             range: right_range,
                             subtree_height: self.subtree_height() - 1,
@@ -191,7 +191,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
             if range.contains_leaf(self.range().min()) {
                 let subkey = self.prg.derive_key(0);
 
-                let child_node = ConstrainedRCPrfLeafElement {
+                let child_node = ConstrainedRcPrfLeafElement {
                     prf: Prf::from_key(subkey),
                     index: range.min(),
                     rcprf_height: self.rcprf_height,
@@ -203,7 +203,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
             if range.contains_leaf(self.range().max()) {
                 let subkey = self.prg.derive_key(1);
 
-                let child_node = ConstrainedRCPrfLeafElement {
+                let child_node = ConstrainedRcPrfLeafElement {
                     prf: Prf::from_key(subkey),
                     index: range.max(),
                     rcprf_height: self.rcprf_height,
@@ -219,7 +219,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
     #[cfg(feature = "rayon")]
     fn unchecked_par_eval_range(
         &self,
-        range: &RCPrfRange,
+        range: &RcPrfRange,
         outputs: &mut [&mut [u8]],
     ) {
         if self.subtree_height() > 2 {
@@ -230,7 +230,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
 
                 // use scopes to avoid any mixups between left and right subtrees
                 {
-                    let left_range = RCPrfRange::new(
+                    let left_range = RcPrfRange::new(
                         self.range().min(),
                         self.range().min() + half_width - 1,
                     );
@@ -245,7 +245,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
 
                             s.spawn(move |_| {
                                 let subkey = self.prg.derive_key(0);
-                                let left_child = ConstrainedRCPrfInnerElement {
+                                let left_child = ConstrainedRcPrfInnerElement {
                                     prg: KeyDerivationPrg::from_key(subkey),
                                     range: left_range,
                                     subtree_height: self.subtree_height() - 1,
@@ -260,7 +260,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
                 }
 
                 {
-                    let right_range = RCPrfRange::new(
+                    let right_range = RcPrfRange::new(
                         self.range().min() + half_width,
                         self.range().max(),
                     );
@@ -270,7 +270,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
                         Some(r) => {
                             // it is not necessary to spawn a new task here
                             let subkey = self.prg.derive_key(1);
-                            let right_child = ConstrainedRCPrfInnerElement {
+                            let right_child = ConstrainedRcPrfInnerElement {
                                 prg: KeyDerivationPrg::from_key(subkey),
                                 range: right_range,
                                 subtree_height: self.subtree_height() - 1,
@@ -292,7 +292,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
             if range.contains_leaf(self.range().min()) {
                 let subkey = self.prg.derive_key(0);
 
-                let child_node = ConstrainedRCPrfLeafElement {
+                let child_node = ConstrainedRcPrfLeafElement {
                     prf: Prf::from_key(subkey),
                     index: range.min(),
                     rcprf_height: self.rcprf_height,
@@ -304,7 +304,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
             if range.contains_leaf(self.range().max()) {
                 let subkey = self.prg.derive_key(1);
 
-                let child_node = ConstrainedRCPrfLeafElement {
+                let child_node = ConstrainedRcPrfLeafElement {
                     prf: Prf::from_key(subkey),
                     index: range.max(),
                     rcprf_height: self.rcprf_height,
@@ -319,23 +319,23 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
 
     fn unchecked_constrain(
         &self,
-        range: &RCPrfRange,
-    ) -> Result<ConstrainedRCPrf, String> {
+        range: &RcPrfRange,
+    ) -> Result<ConstrainedRcPrf, String> {
         debug_assert!(self.range().contains_range(range));
 
         if self.range() == *range {
-            return Ok(ConstrainedRCPrf {
+            return Ok(ConstrainedRcPrf {
                 elements: vec![Box::pin(self.insecure_clone())],
             });
         }
 
         if self.subtree_height() > 2 {
             let half_width = 1u64 << (self.subtree_height() - 2);
-            let left_range = RCPrfRange::new(
+            let left_range = RcPrfRange::new(
                 self.range().min(),
                 self.range().min() + half_width - 1,
             );
-            let right_range = RCPrfRange::new(
+            let right_range = RcPrfRange::new(
                 self.range().min() + half_width,
                 self.range().max(),
             );
@@ -345,7 +345,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
                 Some(subrange) => {
                     let subkey = self.prg.derive_key(0);
 
-                    let left_child = ConstrainedRCPrfInnerElement {
+                    let left_child = ConstrainedRcPrfInnerElement {
                         prg: KeyDerivationPrg::from_key(subkey),
                         range: left_range,
                         subtree_height: self.subtree_height() - 1,
@@ -360,7 +360,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
                 Some(subrange) => {
                     let subkey = self.prg.derive_key(1);
 
-                    let right_child = ConstrainedRCPrfInnerElement {
+                    let right_child = ConstrainedRcPrfInnerElement {
                         prg: KeyDerivationPrg::from_key(subkey),
                         range: right_range,
                         subtree_height: self.subtree_height() - 1,
@@ -397,27 +397,27 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfInnerElement {
             );
             let subkey = self.prg.derive_key(child as u32);
 
-            let child_node = ConstrainedRCPrfLeafElement {
+            let child_node = ConstrainedRcPrfLeafElement {
                 prf: Prf::from_key(subkey),
                 index: range.min(),
                 rcprf_height: self.rcprf_height,
             };
 
-            Ok(ConstrainedRCPrf {
+            Ok(ConstrainedRcPrf {
                 elements: vec![Box::pin(child_node)],
             })
         }
     }
 }
-impl RangePrf for ConstrainedRCPrfInnerElement {
-    fn range(&self) -> RCPrfRange {
+impl RangePrf for ConstrainedRcPrfInnerElement {
+    fn range(&self) -> RcPrfRange {
         self.range.clone()
     }
 }
 
-impl InsecureClone for ConstrainedRCPrfInnerElement {
+impl InsecureClone for ConstrainedRcPrfInnerElement {
     fn insecure_clone(&self) -> Self {
-        ConstrainedRCPrfInnerElement {
+        ConstrainedRcPrfInnerElement {
             prg: self.prg.insecure_clone(),
             rcprf_height: self.rcprf_height,
             range: self.range.clone(),
@@ -426,7 +426,7 @@ impl InsecureClone for ConstrainedRCPrfInnerElement {
     }
 }
 
-impl SerializableCleartextContent for ConstrainedRCPrfInnerElement {
+impl SerializableCleartextContent for ConstrainedRcPrfInnerElement {
     fn serialization_content_byte_size(&self) -> usize {
         self.prg.serialization_content_byte_size()
             + std::mem::size_of_val(&self.subtree_height)
@@ -446,7 +446,7 @@ impl SerializableCleartextContent for ConstrainedRCPrfInnerElement {
     }
 }
 
-impl DeserializableCleartextContent for ConstrainedRCPrfInnerElement {
+impl DeserializableCleartextContent for ConstrainedRcPrfInnerElement {
     fn deserialize_content(
         reader: &mut dyn std::io::Read,
     ) -> Result<Self, CleartextContentDeserializationError> {
@@ -458,9 +458,9 @@ impl DeserializableCleartextContent for ConstrainedRCPrfInnerElement {
         reader.read_exact(&mut sub_h_bytes)?;
         let subtree_height = u8::from_le_bytes(sub_h_bytes);
 
-        let range = RCPrfRange::deserialize_content(reader)?;
+        let range = RcPrfRange::deserialize_content(reader)?;
 
-        Ok(ConstrainedRCPrfInnerElement {
+        Ok(ConstrainedRcPrfInnerElement {
             prg: KeyDerivationPrg::<Key256>::deserialize_content(reader)?,
             rcprf_height,
             subtree_height,

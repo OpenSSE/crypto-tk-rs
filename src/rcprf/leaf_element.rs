@@ -1,4 +1,4 @@
-use crate::private::RCPrfElementPair;
+use crate::private::RcPrfElementPair;
 use crate::rcprf::*;
 use crate::Prf;
 
@@ -6,19 +6,19 @@ use zeroize::Zeroize;
 
 #[derive(Zeroize)]
 #[zeroize(drop)]
-pub(crate) struct ConstrainedRCPrfLeafElement {
+pub(crate) struct ConstrainedRcPrfLeafElement {
     pub prf: Prf,
     pub index: u64,
     pub rcprf_height: u8,
 }
 
-impl TreeBasedPrf for ConstrainedRCPrfLeafElement {
+impl TreeBasedPrf for ConstrainedRcPrfLeafElement {
     fn tree_height(&self) -> u8 {
         self.rcprf_height
     }
 }
 
-impl private::RCPrfElement for ConstrainedRCPrfLeafElement {
+impl private::RcPrfElement for ConstrainedRcPrfLeafElement {
     fn is_leaf(&self) -> bool {
         true
     }
@@ -27,12 +27,12 @@ impl private::RCPrfElement for ConstrainedRCPrfLeafElement {
         2
     }
 
-    fn split_node(&self) -> RCPrfElementPair {
+    fn split_node(&self) -> RcPrfElementPair {
         panic!("Invalid tree state: trying to split a leaf!");
     }
 }
 
-impl private::UncheckedRangePrf for ConstrainedRCPrfLeafElement {
+impl private::UncheckedRangePrf for ConstrainedRcPrfLeafElement {
     fn unchecked_eval(&self, x: u64, output: &mut [u8]) {
         debug_assert_eq!(x, self.index);
         self.prf.fill_bytes(&[0u8], output);
@@ -40,7 +40,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfLeafElement {
 
     fn unchecked_eval_range(
         &self,
-        range: &RCPrfRange,
+        range: &RcPrfRange,
         outputs: &mut [&mut [u8]],
     ) {
         debug_assert_eq!(range.min(), self.index);
@@ -51,7 +51,7 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfLeafElement {
     #[cfg(feature = "rayon")]
     fn unchecked_par_eval_range(
         &self,
-        range: &RCPrfRange,
+        range: &RcPrfRange,
         outputs: &mut [&mut [u8]],
     ) {
         // there is no point in parallelizing here
@@ -60,22 +60,22 @@ impl private::UncheckedRangePrf for ConstrainedRCPrfLeafElement {
 
     fn unchecked_constrain(
         &self,
-        range: &RCPrfRange,
-    ) -> Result<ConstrainedRCPrf, String> {
+        range: &RcPrfRange,
+    ) -> Result<ConstrainedRcPrf, String> {
         debug_assert_eq!(range.width(), 1);
         debug_assert_eq!(range.max(), self.index);
 
         // here, we do have to copy the PRF
         // We do so by getting the key and copying it
-        Ok(ConstrainedRCPrf {
+        Ok(ConstrainedRcPrf {
             elements: vec![Box::pin(self.insecure_clone())],
         })
     }
 }
 
-impl InsecureClone for ConstrainedRCPrfLeafElement {
+impl InsecureClone for ConstrainedRcPrfLeafElement {
     fn insecure_clone(&self) -> Self {
-        ConstrainedRCPrfLeafElement {
+        ConstrainedRcPrfLeafElement {
             prf: self.prf.insecure_clone(),
             rcprf_height: self.rcprf_height,
             index: self.index,
@@ -83,13 +83,13 @@ impl InsecureClone for ConstrainedRCPrfLeafElement {
     }
 }
 
-impl RangePrf for ConstrainedRCPrfLeafElement {
-    fn range(&self) -> RCPrfRange {
-        RCPrfRange::new(self.index, self.index)
+impl RangePrf for ConstrainedRcPrfLeafElement {
+    fn range(&self) -> RcPrfRange {
+        RcPrfRange::new(self.index, self.index)
     }
 }
 
-impl SerializableCleartextContent for ConstrainedRCPrfLeafElement {
+impl SerializableCleartextContent for ConstrainedRcPrfLeafElement {
     fn serialization_content_byte_size(&self) -> usize {
         self.prf.serialization_content_byte_size()
             + std::mem::size_of_val(&self.index)
@@ -107,7 +107,7 @@ impl SerializableCleartextContent for ConstrainedRCPrfLeafElement {
     }
 }
 
-impl DeserializableCleartextContent for ConstrainedRCPrfLeafElement {
+impl DeserializableCleartextContent for ConstrainedRcPrfLeafElement {
     fn deserialize_content(
         reader: &mut dyn std::io::Read,
     ) -> Result<Self, CleartextContentDeserializationError> {
@@ -119,7 +119,7 @@ impl DeserializableCleartextContent for ConstrainedRCPrfLeafElement {
         reader.read_exact(&mut i_bytes)?;
         let index = u64::from_le_bytes(i_bytes);
 
-        Ok(ConstrainedRCPrfLeafElement {
+        Ok(ConstrainedRcPrfLeafElement {
             prf: Prf::deserialize_content(reader)?,
             rcprf_height,
             index,
