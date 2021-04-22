@@ -207,6 +207,25 @@ impl<KeyType: Key> DeserializableCleartextContent
 mod tests {
     use super::*;
 
+    #[test]
+    fn output_uniqueness() {
+        const N_TRIES: usize = 20;
+        let mut outs = [[0u8; 20]; N_TRIES];
+        let prf = Prf::new();
+
+        #[allow(clippy::needless_range_loop)] // False positive
+        for i in 0..outs.len() {
+            prf.fill_bytes(&i.to_le_bytes(), &mut outs[i]);
+        }
+
+        for i in 0..outs.len() {
+            let a1 = &outs[i];
+            for a2 in &outs[0..i] {
+                assert_ne!(a1, a2);
+            }
+        }
+    }
+
     fn key_derivation<KeyType: Key + KeyAccessor>() {
         let k = Key256::new();
         let k_dup = k.insecure_clone();
