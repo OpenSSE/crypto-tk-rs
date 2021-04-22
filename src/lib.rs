@@ -24,6 +24,8 @@
 
 mod insecure_clone;
 
+pub mod aead_cipher;
+pub mod errors;
 pub mod key;
 pub mod prf;
 pub mod prg;
@@ -32,6 +34,8 @@ pub mod serialization;
 pub mod utils;
 
 // Export everything public in modules
+pub use crate::aead_cipher::*;
+pub use crate::errors::*;
 pub use crate::key::*;
 pub use crate::prf::*;
 pub use crate::prg::*;

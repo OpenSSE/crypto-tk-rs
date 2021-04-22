@@ -1,5 +1,5 @@
-use crate::errors::CleartextContentDeserializationError;
 use crate::serialization::cleartext_serialization::*;
+use crate::serialization::errors::CleartextContentDeserializationError;
 use std::ops::Bound::*;
 use std::ops::{Bound, RangeBounds};
 

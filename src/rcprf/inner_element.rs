@@ -1,6 +1,6 @@
-use crate::errors::CleartextContentDeserializationError;
 use crate::private::{RcPrfElement, RcPrfElementPair};
 use crate::rcprf::*;
+use crate::serialization::errors::CleartextContentDeserializationError;
 use crate::Prf;
 
 use zeroize::Zeroize;
