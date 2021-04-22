@@ -101,6 +101,62 @@ impl Prf {
         }
     }
 }
+/// Pseudo random function used to derive cryptographic keys.
+/// See `Prf` for more details of the PRF evaluation.
+pub struct KeyDerivationPrf<KeyType: Key> {
+    prf: Prf,
+    _marker: std::marker::PhantomData<KeyType>,
+}
+
+impl<KeyType: Key> Zeroize for KeyDerivationPrf<KeyType> {
+    fn zeroize(&mut self) {
+        self.prf.zeroize();
+    }
+}
+
+impl<KeyType: Key> Drop for KeyDerivationPrf<KeyType> {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl<KeyType: Key> InsecureClone for KeyDerivationPrf<KeyType> {
+    fn insecure_clone(&self) -> Self {
+        KeyDerivationPrf::<KeyType> {
+            prf: self.prf.insecure_clone(),
+            _marker: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<KeyType: Key> KeyDerivationPrf<KeyType> {
+    /// Construct a PRF for key derivation from a 256 bits key
+    pub fn from_key(key: Key256) -> KeyDerivationPrf<KeyType> {
+        Self {
+            prf: Prf::from_key(key),
+            _marker: std::marker::PhantomData,
+        }
+    }
+
+    /// Construct a PRF for key derivation from a new random key
+    #[allow(clippy::new_without_default)] // This is done on purpose to avoid
+                                          // involuntary creation of a PRF with
+                                          // a random key
+    pub fn new() -> KeyDerivationPrf<KeyType> {
+        Self {
+            prf: Prf::new(),
+            _marker: std::marker::PhantomData,
+        }
+    }
+
+    /// Derive a new pseudo-random key from the given input
+    pub fn derive_key(&self, input: &[u8]) -> KeyType {
+        let mut buf = vec![0u8; KeyType::KEY_SIZE];
+        self.prf.fill_bytes(input, &mut buf);
+
+        KeyType::from_slice(&mut buf)
+    }
+}
 
 impl SerializableCleartextContent for Prf {
     fn serialization_content_byte_size(&self) -> usize {
@@ -119,5 +175,55 @@ impl DeserializableCleartextContent for Prf {
         reader: &mut dyn std::io::Read,
     ) -> Result<Self, CleartextContentDeserializationError> {
         Ok(Prf::from_key(Key256::deserialize_content(reader)?))
+    }
+}
+
+impl<KeyType: Key> SerializableCleartextContent for KeyDerivationPrf<KeyType> {
+    fn serialization_content_byte_size(&self) -> usize {
+        self.prf.serialization_content_byte_size()
+    }
+    fn serialize_content(
+        &self,
+        writer: &mut dyn std::io::Write,
+    ) -> Result<usize, std::io::Error> {
+        self.prf.serialize_content(writer)
+    }
+}
+
+impl<KeyType: Key> DeserializableCleartextContent
+    for KeyDerivationPrf<KeyType>
+{
+    fn deserialize_content(
+        reader: &mut dyn std::io::Read,
+    ) -> Result<Self, CleartextContentDeserializationError> {
+        Ok(Self {
+            prf: Prf::deserialize_content(reader)?,
+            _marker: std::marker::PhantomData,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn key_derivation<KeyType: Key + KeyAccessor>() {
+        let k = Key256::new();
+        let k_dup = k.insecure_clone();
+        let prf = Prf::from_key(k);
+        let derivation_prf = KeyDerivationPrf::<KeyType>::from_key(k_dup);
+
+        let input = b"FooBar";
+        let mut out = vec![0u8; KeyType::KEY_SIZE];
+
+        prf.fill_bytes(input, &mut out);
+        let k_deriv = derivation_prf.derive_key(input);
+
+        assert!(k_deriv.content() == out);
+    }
+
+    #[test]
+    fn key_derivation_256() {
+        key_derivation::<Key256>();
     }
 }
