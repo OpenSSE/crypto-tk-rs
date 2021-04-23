@@ -27,7 +27,9 @@ use crate::{Key256, KeyAccessor};
 /// Let `IV` be a random 128 bits string, and set `K_e = Prf(K,IV)`.
 /// The ciphertext would be `c = Enc(K_e,IV,m)` where `Enc` is the Chacha20+Poly1305 encryption algorithm. Note that there is no issue in reusing the nonce here as Chacha20+Poly1305 is a nonce-based scheme (and not random-IV-based), and that `K_e` is unique (with high probability) for every message.
 ///
-/// This approach has been adopted by Google on their Cloud, exactly for the same reason: avoiding nonce reuse (or more exactly, nonce collision). See their [CCS 2017 paper]() for more details and security proofs.
+/// This approach has been thoroughly described by Gueron and Bellare, with examples of real-world application in [their CCS'17 paper](https://eprint.iacr.org/2017/702.pdf).
+/// We refer to this document for the full proof of security of this construction.
+
 #[derive(Zeroize)]
 #[zeroize(drop)]
 pub struct AeadCipher {
