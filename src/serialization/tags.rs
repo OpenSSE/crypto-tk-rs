@@ -161,6 +161,7 @@ mod tests {
 
     #[test]
     fn errors() {
-        assert!(SerializationTag::try_from(25).is_err());
+        SerializationTag::try_from(25)
+            .expect_err("Invalid tag, error not raised");
     }
 }
