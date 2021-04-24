@@ -5,7 +5,7 @@ use super::errors::*;
 #[cfg(test)]
 use {strum::IntoEnumIterator, strum_macros::EnumIter};
 
-use crate::{rcprf::*, Key, KeyDerivationPrg, Prf, Prg};
+use crate::{rcprf::*, AeadCipher, Cipher, Key, KeyDerivationPrg, Prf, Prg};
 
 /// Tag encoding the type of a serialized cryptographic object
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -19,6 +19,8 @@ pub enum SerializationTag {
     ConstrainedRcPrf,
     ConstrainedRcPrfLeafElement,
     ConstrainedRcPrfInnerElement,
+    Cipher,
+    AeadCipher,
 }
 
 impl TryFrom<u16> for SerializationTag {
@@ -42,6 +44,12 @@ impl TryFrom<u16> for SerializationTag {
             }
             x if x == SerializationTag::ConstrainedRcPrfInnerElement as u16 => {
                 Ok(SerializationTag::ConstrainedRcPrfInnerElement)
+            }
+            x if x == SerializationTag::Cipher as u16 => {
+                Ok(SerializationTag::Cipher)
+            }
+            x if x == SerializationTag::AeadCipher as u16 => {
+                Ok(SerializationTag::AeadCipher)
             }
             _ => Err(SerializationTagConversionError(v)),
         }
@@ -118,6 +126,18 @@ impl SerializationTaggedType for leaf_element::ConstrainedRcPrfLeafElement {
 impl SerializationTaggedType for inner_element::ConstrainedRcPrfInnerElement {
     fn serialization_tag() -> SerializationTag {
         SerializationTag::ConstrainedRcPrfInnerElement
+    }
+}
+
+impl SerializationTaggedType for Cipher {
+    fn serialization_tag() -> SerializationTag {
+        SerializationTag::Cipher
+    }
+}
+
+impl SerializationTaggedType for AeadCipher {
+    fn serialization_tag() -> SerializationTag {
+        SerializationTag::AeadCipher
     }
 }
 

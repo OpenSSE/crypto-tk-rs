@@ -11,7 +11,10 @@ use rand::RngCore;
 use zeroize::Zeroize;
 
 // use std::vec::Vec;
-
+use crate::serialization::cleartext_serialization::{
+    DeserializableCleartextContent, SerializableCleartextContent,
+};
+use crate::serialization::errors::CleartextContentDeserializationError;
 use crate::{insecure_clone::private::InsecureClone, EncryptionError};
 use crate::{DecryptionError, KeyDerivationPrf};
 use crate::{Key256, KeyAccessor};
@@ -137,6 +140,32 @@ impl Cipher {
         Ok(())
     }
 }
+
+impl SerializableCleartextContent for Cipher {
+    fn serialization_content_byte_size(&self) -> usize {
+        self.key_derivation_prf.serialization_content_byte_size()
+    }
+    fn serialize_content(
+        &self,
+        writer: &mut dyn std::io::Write,
+    ) -> Result<usize, std::io::Error> {
+        self.key_derivation_prf.serialize_content(writer)?;
+
+        Ok(self.serialization_content_byte_size())
+    }
+}
+
+impl DeserializableCleartextContent for Cipher {
+    fn deserialize_content(
+        reader: &mut dyn std::io::Read,
+    ) -> Result<Self, CleartextContentDeserializationError> {
+        Ok(Cipher {
+            key_derivation_prf:
+                KeyDerivationPrf::<Key256>::deserialize_content(reader)?,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::Key;

@@ -125,3 +125,53 @@ fn constrained_rcprf_serialization() {
         }
     }
 }
+
+const TEST_PLAINTEXT: &[u8] = b"Test plaintext";
+
+#[test]
+fn cipher_serialization() {
+    let k = Key256::new();
+    let cipher = Cipher::from_key(k);
+
+    let mut ser_buffer = vec![];
+    let written_bytes = cipher.serialize_cleartext(&mut ser_buffer).unwrap();
+    assert_eq!(written_bytes, ser_buffer.len());
+
+    let mut cursor = Cursor::new(ser_buffer);
+    let deser_cipher = Cipher::deserialize_cleartext(&mut cursor).unwrap();
+
+    let plaintext = TEST_PLAINTEXT;
+    let mut ciphertext =
+        vec![0u8; plaintext.len() + Cipher::CIPHERTEXT_EXPANSION];
+    let mut dec_result = vec![0u8; plaintext.len()];
+
+    cipher.encrypt(plaintext, &mut ciphertext).unwrap();
+
+    deser_cipher.decrypt(&ciphertext, &mut dec_result).unwrap();
+
+    assert_eq!(plaintext, &dec_result[..]);
+}
+
+#[test]
+fn aead_cipher_serialization() {
+    let k = Key256::new();
+    let cipher = AeadCipher::from_key(k);
+
+    let mut ser_buffer = vec![];
+    let written_bytes = cipher.serialize_cleartext(&mut ser_buffer).unwrap();
+    assert_eq!(written_bytes, ser_buffer.len());
+
+    let mut cursor = Cursor::new(ser_buffer);
+    let deser_cipher = AeadCipher::deserialize_cleartext(&mut cursor).unwrap();
+
+    let plaintext = TEST_PLAINTEXT;
+    let mut ciphertext =
+        vec![0u8; plaintext.len() + AeadCipher::CIPHERTEXT_EXPANSION];
+    let mut dec_result = vec![0u8; plaintext.len()];
+
+    cipher.encrypt(plaintext, &mut ciphertext).unwrap();
+
+    deser_cipher.decrypt(&ciphertext, &mut dec_result).unwrap();
+
+    assert_eq!(plaintext, &dec_result[..]);
+}
