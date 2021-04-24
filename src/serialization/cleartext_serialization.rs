@@ -24,6 +24,7 @@ pub trait SerializableCleartext:
 {
     fn cleartext_serialization_length(&self) -> usize {
         self.serialization_content_byte_size()
+            + SerializationTag::SERIALIZATION_SIZE
     }
 
     fn serialize_cleartext(

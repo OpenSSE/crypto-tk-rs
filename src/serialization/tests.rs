@@ -13,10 +13,20 @@ fn ser_deser<T: DeserializableCleartext + SerializableCleartext>(
     T::deserialize_cleartext(&mut cursor).unwrap()
 }
 
-#[test]
-fn prf_serialization() {
+fn wrap_unwrap<T: Wrappable>(object: &T) -> T {
+    let k = Key256::new();
+    let wrapper = CryptoWrapper::from_key(k);
+
+    let bytes = wrapper.wrap(object);
+    wrapper.unwrap(&bytes).unwrap()
+}
+
+fn test_prf_identity<F>(fun: F)
+where
+    F: Fn(&Prf) -> Prf,
+{
     let prf = Prf::new();
-    let deser_prf = ser_deser(&prf);
+    let deser_prf = fun(&prf);
 
     let input = 0u64.to_le_bytes();
     let mut eval_1 = [0u8; 32];
@@ -27,11 +37,22 @@ fn prf_serialization() {
 
     assert_eq!(eval_1, eval_2);
 }
+#[test]
+fn prf_serialization() {
+    test_prf_identity(ser_deser);
+}
 
 #[test]
-fn prg_serialization() {
+fn prf_wrapping() {
+    test_prf_identity(wrap_unwrap);
+}
+
+fn test_prg_identity<F>(fun: F)
+where
+    F: Fn(&Prg) -> Prg,
+{
     let prg = Prg::new();
-    let deser_prg = ser_deser(&prg);
+    let deser_prg = fun(&prg);
 
     let mut eval_1 = [0u8; 32];
     let mut eval_2 = [0u8; 32];
@@ -43,9 +64,21 @@ fn prg_serialization() {
 }
 
 #[test]
-fn key_derivation_prg_serialization() {
+fn prg_serialization() {
+    test_prg_identity(ser_deser);
+}
+
+#[test]
+fn prg_wrapping() {
+    test_prg_identity(wrap_unwrap);
+}
+
+fn test_key_derivation_prg_identity<F>(fun: F)
+where
+    F: Fn(&KeyDerivationPrg<Key256>) -> KeyDerivationPrg<Key256>,
+{
     let prg = KeyDerivationPrg::<Key256>::new();
-    let deser_prg = ser_deser(&prg);
+    let deser_prg = fun(&prg);
 
     let k1 = prg.derive_key(0);
     let k2 = deser_prg.derive_key(0);
@@ -54,9 +87,21 @@ fn key_derivation_prg_serialization() {
 }
 
 #[test]
-fn rcprf_serialization() {
+fn key_derivation_prg_serialization() {
+    test_key_derivation_prg_identity(ser_deser);
+}
+
+#[test]
+fn key_derivation_prg_wrapping() {
+    test_key_derivation_prg_identity(wrap_unwrap);
+}
+
+fn test_rcprf_identity<F>(fun: F)
+where
+    F: Fn(&RcPrf) -> RcPrf,
+{
     let rcprf = RcPrf::new(8).unwrap();
-    let deser_rcprf = ser_deser(&rcprf);
+    let deser_rcprf = fun(&rcprf);
 
     let mut out1 = [0u8; 32];
     let mut out2 = [0u8; 32];
@@ -68,7 +113,19 @@ fn rcprf_serialization() {
 }
 
 #[test]
-fn constrained_rcprf_serialization() {
+fn rcprf_serialization() {
+    test_rcprf_identity(ser_deser);
+}
+
+#[test]
+fn rcprf_wrapping() {
+    test_rcprf_identity(wrap_unwrap);
+}
+
+fn test_constrained_rcprf_identity<F>(fun: F)
+where
+    F: Fn(&ConstrainedRcPrf) -> ConstrainedRcPrf,
+{
     let h = 6u8;
 
     let rcprf = RcPrf::new(h).unwrap();
@@ -78,7 +135,7 @@ fn constrained_rcprf_serialization() {
         for end in start..=max_leaf_index(h) {
             let range = RcPrfRange::new(start, end);
             let constrained_rcprf = rcprf.constrain(&range).unwrap();
-            let deser_constrained_rcprf = ser_deser(&constrained_rcprf);
+            let deser_constrained_rcprf = fun(&constrained_rcprf);
 
             let constrained_eval_0: Vec<[u8; 16]> = (start..=end)
                 .map(|x| {
@@ -103,14 +160,26 @@ fn constrained_rcprf_serialization() {
     }
 }
 
-const TEST_PLAINTEXT: &[u8] = b"Test plaintext";
+#[test]
+fn constrained_rcprf_serialization() {
+    test_constrained_rcprf_identity(ser_deser);
+}
 
 #[test]
-fn cipher_serialization() {
+fn constrained_rcprf_wrapping() {
+    test_constrained_rcprf_identity(wrap_unwrap);
+}
+
+const TEST_PLAINTEXT: &[u8] = b"Test plaintext";
+
+fn test_cipher_identity<F>(fun: F)
+where
+    F: Fn(&Cipher) -> Cipher,
+{
     let k = Key256::new();
     let cipher = Cipher::from_key(k);
 
-    let deser_cipher = ser_deser(&cipher);
+    let deser_cipher = fun(&cipher);
 
     let plaintext = TEST_PLAINTEXT;
     let mut ciphertext =
@@ -125,11 +194,23 @@ fn cipher_serialization() {
 }
 
 #[test]
-fn aead_cipher_serialization() {
+fn cipher_serialization() {
+    test_cipher_identity(ser_deser);
+}
+
+#[test]
+fn cipher_wrapping() {
+    test_cipher_identity(wrap_unwrap);
+}
+
+fn test_aead_cipher_identity<F>(fun: F)
+where
+    F: Fn(&AeadCipher) -> AeadCipher,
+{
     let k = Key256::new();
     let cipher = AeadCipher::from_key(k);
 
-    let deser_cipher = ser_deser(&cipher);
+    let deser_cipher = fun(&cipher);
 
     let plaintext = TEST_PLAINTEXT;
     let mut ciphertext =
@@ -141,4 +222,14 @@ fn aead_cipher_serialization() {
     deser_cipher.decrypt(&ciphertext, &mut dec_result).unwrap();
 
     assert_eq!(plaintext, &dec_result[..]);
+}
+
+#[test]
+fn aead_cipher_serialization() {
+    test_aead_cipher_identity(ser_deser);
+}
+
+#[test]
+fn aead_cipher_wrapping() {
+    test_cipher_identity(wrap_unwrap);
 }

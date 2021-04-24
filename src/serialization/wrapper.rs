@@ -37,7 +37,9 @@ impl CryptoWrapper {
         let mut buf = Zeroizing::new(vec![0u8; plain_length]);
 
         // serialize the object to plaintext
-        object.serialize_cleartext(&mut buf.deref_mut()).unwrap();
+        object
+            .serialize_cleartext(&mut buf.deref_mut().as_mut_slice())
+            .unwrap();
 
         // encrypt it
         let mut ct = vec![0u8; plain_length + AeadCipher::CIPHERTEXT_EXPANSION];
