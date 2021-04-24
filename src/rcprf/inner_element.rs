@@ -228,7 +228,8 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfInnerElement {
             rayon::scope(move |s| {
                 let mut current = outputs;
 
-                // use scopes to avoid any mixups between left and right subtrees
+                // use scopes to avoid any mixups between left and right
+                // subtrees
                 {
                     let left_range = RcPrfRange::new(
                         self.range().min(),

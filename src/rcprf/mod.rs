@@ -34,10 +34,14 @@ pub use crate::traits::*;
 ///
 /// ## Concept
 ///
-/// The point of range-constrained pseudo-random functions (RC-PRF) is to have PRFs for which you can restrict the evaluation to a specific range. In practice, you call a `constrain` algorithm on the RC-PRF, with a range argument `(a..b)`, and get a PRF-like object that you can evaluate on integer in the range `[a, b-1]`.
+/// The point of range-constrained pseudo-random functions (RC-PRF) is to have
+/// PRFs for which you can restrict the evaluation to a specific range. In
+/// practice, you call a `constrain` algorithm on the RC-PRF, with a range
+/// argument `(a..b)`, and get a PRF-like object that you can evaluate on
+/// integer in the range `[a, b-1]`.
 ///
-/// Our RC-PRF implementation is based on a tree construction, similar to the Goldreich-Goldwasser-Micali construction.
-///
+/// Our RC-PRF implementation is based on a tree construction, similar to the
+/// Goldreich-Goldwasser-Micali construction.
 
 // Type encoding a choice of child in a binary tree.
 #[derive(Clone, Copy, Debug)]
@@ -49,7 +53,9 @@ pub(crate) enum RcPrfTreeNodeChild {
 /// Maximum tree height of a RcPrf tree
 pub const MAX_HEIGHT: u8 = 65;
 
-/// Returns the maximum leaf index for a RcPrf using a tree of height `height`. It returns 0 for a tree of height 0 and 2^64-1 for a `height` larger or equal to `MAX_HEIGHT` (65)
+/// Returns the maximum leaf index for a RcPrf using a tree of height `height`.
+/// It returns 0 for a tree of height 0 and 2^64-1 for a `height` larger or
+/// equal to `MAX_HEIGHT` (65)
 pub const fn max_leaf_index(height: u8) -> u64 {
     if height == 0 {
         return 0;
@@ -85,7 +91,8 @@ pub struct RcPrf {
     root: ConstrainedRcPrfInnerElement,
 }
 
-/// A *constrained* RcPrf object (obtained after constraining a RcPrf - constrained or not)
+/// A *constrained* RcPrf object (obtained after constraining a RcPrf -
+/// constrained or not)
 pub struct ConstrainedRcPrf {
     elements: Vec<Pin<Box<dyn private::RcPrfElement>>>,
 }

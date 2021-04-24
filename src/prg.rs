@@ -31,7 +31,6 @@ use std::vec::Vec;
 /// a block cipher or a stream cipher. For the actual difference on your
 /// platform, run `cargo bench`.
 ///
-///
 #[derive(Zeroize)]
 #[zeroize(drop)]
 pub struct Prg {
@@ -70,9 +69,10 @@ impl Prg {
         });
     }
 
-    /// Fill a slice with pseudo-random bytes resulting from the PRG evaluation, with an offset of `offset` bytes.
-    /// This allows for a more efficient evaluation when `offset` is large (instead of throwing away the prefix of the buffer)
-    /// # Example
+    /// Fill a slice with pseudo-random bytes resulting from the PRG evaluation,
+    /// with an offset of `offset` bytes. This allows for a more efficient
+    /// evaluation when `offset` is large (instead of throwing away the prefix
+    /// of the buffer) # Example
     /// ```
     /// # extern crate crypto_tk_rs;
     /// use crypto_tk_rs::Prg;
@@ -85,7 +85,6 @@ impl Prg {
     /// prg.fill_offset_pseudo_random_bytes(2, &mut buf_offset);
     /// # assert_eq!(&buf[2..], &buf_offset[..]);
     /// ```
-    ///
     pub fn fill_offset_pseudo_random_bytes(
         &self,
         offset: usize,

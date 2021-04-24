@@ -4,3 +4,5 @@ hard_tabs = false
 tab_spaces = 4
 
 max_width = 80
+
+wrap_comments = true

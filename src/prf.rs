@@ -30,7 +30,6 @@ use zeroize::Zeroize;
 /// the block's index as salt, and the total length as personalization.
 /// Those last two parameters are little-endian encoded.
 ///
-///
 #[derive(Zeroize)]
 #[zeroize(drop)]
 pub struct Prf {
@@ -61,9 +60,11 @@ impl Prf {
     }
 
     /// Fill a slice with pseudo-random bytes resulting from the PRF evaluation.
-    /// The output length is used as a parameter of the PRF (think additional input data).
-    /// The PRF is called in counter mode, so as to be able to fill slices larger than the base-PRF's output size.
-    /// In this implementation based on Blake2b, the counter is input as the salt of the PRF evaluation.
+    /// The output length is used as a parameter of the PRF (think additional
+    /// input data). The PRF is called in counter mode, so as to be able to
+    /// fill slices larger than the base-PRF's output size.
+    /// In this implementation based on Blake2b, the counter is input as the
+    /// salt of the PRF evaluation.
     pub fn fill_bytes(&self, input: &[u8], output: &mut [u8]) {
         let mut hash: blake2b_simd::Hash;
 
@@ -91,7 +92,8 @@ impl Prf {
             // cleanup
             params.clear();
             // we must clean the hash variable
-            // unfortunately, as blake2b_simd::Hash does not implement neither the Default nor the Zeroize trait, we cannot do that simply
+            // unfortunately, as blake2b_simd::Hash does not implement neither
+            // the Default nor the Zeroize trait, we cannot do that simply
 
             state.clear();
 

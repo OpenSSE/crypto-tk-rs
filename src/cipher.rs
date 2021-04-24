@@ -21,17 +21,29 @@ use crate::{Key256, KeyAccessor};
 
 /// Encryption & decryption (unauthenticated)
 ///
-/// Cipher implements encryption (and decryption), using the Chacha20 stream cipher. You probably want to use authenticated encryption for increased security. Use unauthenticated encryption only if you know what you are doing
-/// To avoid having to keep a state, the nonce is randomly generated. Unfortunately, Chacha20 has small nonces (96 bits), which means that replay attacks might happen very quickly (after about 2^32 blocks encrypted with the same key). In order to avoid such attacks, we use a 128 bits nonce which is itself used to derive a encryption key using a PRF keyed with the main key.
-/// This allows us to encrypt a very large number of messages using the same main key.
+/// Cipher implements encryption (and decryption), using the Chacha20 stream
+/// cipher. You probably want to use authenticated encryption for increased
+/// security. Use unauthenticated encryption only if you know what you are doing
+/// To avoid having to keep a state, the nonce is randomly generated.
+/// Unfortunately, Chacha20 has small nonces (96 bits), which means that replay
+/// attacks might happen very quickly (after about 2^32 blocks encrypted with
+/// the same key). In order to avoid such attacks, we use a 128 bits nonce which
+/// is itself used to derive a encryption key using a PRF keyed with the main
+/// key. This allows us to encrypt a very large number of messages using the
+/// same main key.
 ///
 /// ## Key derivation
 /// Let `K` be the main key, and `m` the message to encrypt.
 /// Let `IV` be a random 128 bits string, and set `K_e = Prf(K,IV)`.
-/// The ciphertext would be `c = Enc(K_e,IV,m)` where `Enc` is the Chacha20+Poly1305 encryption algorithm. Note that there is no issue in reusing the nonce here as Chacha20+Poly1305 is a nonce-based scheme (and not random-IV-based), and that `K_e` is unique (with high probability) for every message.
+/// The ciphertext would be `c = Enc(K_e,IV,m)` where `Enc` is the
+/// Chacha20+Poly1305 encryption algorithm. Note that there is no issue in
+/// reusing the nonce here as Chacha20+Poly1305 is a nonce-based scheme (and not
+/// random-IV-based), and that `K_e` is unique (with high probability) for every
+/// message.
 ///
 /// This approach has been thoroughly described by Gueron and Bellare, with examples of real-world application in [their CCS'17 paper](https://eprint.iacr.org/2017/702.pdf).
-/// We refer to this document for the full proof of security of this construction.
+/// We refer to this document for the full proof of security of this
+/// construction.
 
 #[derive(Zeroize)]
 #[zeroize(drop)]
@@ -53,7 +65,8 @@ impl Cipher {
 
     const CHACHA20_NONCE_LENGTH: usize = 12;
 
-    /// The ciphertext expansion, i.e. the number of additional bytes due to the encryption
+    /// The ciphertext expansion, i.e. the number of additional bytes due to the
+    /// encryption
     pub const CIPHERTEXT_EXPANSION: usize = Cipher::NONCE_SIZE;
 
     /// Construct a cipher from a 256 bits key
@@ -63,8 +76,10 @@ impl Cipher {
         }
     }
 
-    /// Encrypt a byte slice and write the result of the encryption in `ciphertext`.
-    /// Returns an error if the `ciphertext` slice cannot contain the result, i.e. if it is not at least `CIPHERTEXT_EXPANSION` bytes longer than `plaintext`.
+    /// Encrypt a byte slice and write the result of the encryption in
+    /// `ciphertext`. Returns an error if the `ciphertext` slice cannot
+    /// contain the result, i.e. if it is not at least `CIPHERTEXT_EXPANSION`
+    /// bytes longer than `plaintext`.
     pub fn encrypt(
         &self,
         plaintext: &[u8],
@@ -102,9 +117,11 @@ impl Cipher {
         Ok(())
     }
 
-    /// Decrypt a byte slice and write the result of the decryption in `plaintext`.
-    /// Returns an error if the `plaintext` slice cannot contain the result, i.e. if it is not at least `CIPHERTEXT_EXPANSION` bytes smaller than `ciphertext`.
-    /// Also returns an error if `ciphertext`'s length is smaller than `CIPHERTEXT_EXPANSION` bytes
+    /// Decrypt a byte slice and write the result of the decryption in
+    /// `plaintext`. Returns an error if the `plaintext` slice cannot
+    /// contain the result, i.e. if it is not at least `CIPHERTEXT_EXPANSION`
+    /// bytes smaller than `ciphertext`. Also returns an error if
+    /// `ciphertext`'s length is smaller than `CIPHERTEXT_EXPANSION` bytes
     pub fn decrypt(
         &self,
         ciphertext: &[u8],

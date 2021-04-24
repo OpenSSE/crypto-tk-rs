@@ -98,7 +98,8 @@ pub trait RangePrf: private::UncheckedRangePrf {
     /// Evaluate the PRF on every value of the `range` in parallel and put the
     /// result in `outputs` such that the i-th value of the range is put at the
     /// i-th position of the output.
-    /// Returns an error when `range` is not contained in the PRF's range.    #[cfg(feature = "rayon")]
+    /// Returns an error when `range` is not contained in the PRF's range.
+    #[cfg(feature = "rayon")]
     fn par_eval_range(
         &self,
         range: &RcPrfRange,

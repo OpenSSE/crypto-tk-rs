@@ -75,7 +75,6 @@ impl RcPrfRange {
     /// let range = RcPrfRange::from(4..7);
     /// assert_eq!(range.min(), 4);
     /// ```
-    ///
     pub fn min(&self) -> u64 {
         *self.range.start()
     }
@@ -89,7 +88,6 @@ impl RcPrfRange {
     /// let range = RcPrfRange::from(4..7);
     /// assert_eq!(range.max(), 6);
     /// ```
-    ///
     pub fn max(&self) -> u64 {
         *self.range.end()
     }
@@ -178,7 +176,6 @@ impl RcPrfRange {
     /// assert_eq!(range.intersection(&RcPrfRange::from(9..10)), None);
     /// assert_eq!(range.intersection(&(0..0)), None);
     /// ```
-    ///
     pub fn intersection<R>(&self, r: &R) -> Option<RcPrfRange>
     where
         R: RangeBounds<u64>,
@@ -187,7 +184,10 @@ impl RcPrfRange {
         let r_start: u64 = match r.start_bound() {
             Unbounded => 0,
             Included(&a) if self.max() >= a => a,
-            Excluded(&a) if self.max() > a => a + 1, // if the condition is true, we are sure that a+1 is not overflowing
+            Excluded(&a) if self.max() > a => a + 1, /* if the condition is
+                                                       * true, we are sure
+                                                       * that a+1 is not
+                                                       * overflowing */
             _ => {
                 intersects = false;
                 0
@@ -197,7 +197,10 @@ impl RcPrfRange {
         let r_end: u64 = match r.end_bound() {
             Unbounded => u64::max_value(),
             Included(&a) if self.min() <= a => a,
-            Excluded(&a) if self.min() < a => a - 1, // if the condition is true, we are sure that a-1 is not underflowing
+            Excluded(&a) if self.min() < a => a - 1, /* if the condition is
+                                                       * true, we are sure
+                                                       * that a-1 is not
+                                                       * underflowing */
             _ => {
                 intersects = false;
                 0
