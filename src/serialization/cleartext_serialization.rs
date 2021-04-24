@@ -5,7 +5,7 @@ use super::tags::*;
 
 use either::Either;
 
-pub(crate) trait SerializableCleartextContent {
+pub trait SerializableCleartextContent {
     fn serialization_content_byte_size(&self) -> usize;
     fn serialize_content(
         &self,
@@ -13,13 +13,13 @@ pub(crate) trait SerializableCleartextContent {
     ) -> Result<usize, std::io::Error>;
 }
 
-pub(crate) trait DeserializableCleartextContent: Sized {
+pub trait DeserializableCleartextContent: Sized {
     fn deserialize_content(
         reader: &mut dyn std::io::Read,
     ) -> Result<Self, CleartextContentDeserializationError>;
 }
 
-pub(crate) trait SerializableCleartext:
+pub trait SerializableCleartext:
     SerializableCleartextContent + SerializationTagged
 {
     fn cleartext_serialization_length(&self) -> usize {
@@ -43,7 +43,7 @@ impl<T> SerializableCleartext for T where
 {
 }
 
-pub(crate) trait DeserializableCleartext:
+pub trait DeserializableCleartext:
     DeserializableCleartextContent + SerializationTaggedType
 {
     fn deserialize_cleartext(
@@ -63,7 +63,7 @@ impl<T> DeserializableCleartext for T where
 {
 }
 
-pub(crate) fn deserialize_either_cleartext<U, V>(
+pub fn deserialize_either_cleartext<U, V>(
     reader: &mut dyn std::io::Read,
 ) -> Result<Either<U, V>, CleartextDeserializationError>
 where

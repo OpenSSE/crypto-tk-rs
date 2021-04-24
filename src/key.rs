@@ -48,7 +48,7 @@ pub trait Key: InsecureClone + Zeroize {
     /// let mut buf = [1u8;32];
     /// let k = Key256::from_slice(&mut buf[..]);
     /// /// buf is set to all 0
-    /// # assert_eq!(buf[..], [0u8; 32]);
+    /// assert_eq!(buf[..], [0u8; 32]);
     /// ```
     fn from_slice(bytes: &mut [u8]) -> Self;
 }
@@ -79,7 +79,7 @@ impl Key256 {
     /// let mut buf = [1u8;32];
     /// let k = Key256::from_bytes(&mut buf);
     /// /// buf is set to all 0
-    /// # assert_eq!(buf, [0u8; 32]);
+    /// assert_eq!(buf, [0u8; 32]);
     /// ```
     pub fn from_bytes(randomness: &mut [u8; 32]) -> Key256 {
         let k = Key256 {

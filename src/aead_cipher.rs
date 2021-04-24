@@ -181,6 +181,26 @@ impl AeadCipher {
 
         Ok(())
     }
+
+    /// Decrypt a byte slice and returns the result of the decryption as a vector of byte. Returns an error if
+    /// `ciphertext`'s length is smaller than `CIPHERTEXT_EXPANSION` bytes
+    pub fn decrypt_to_vec(
+        &self,
+        ciphertext: &[u8],
+    ) -> Result<Vec<u8>, DecryptionError> {
+        let l = ciphertext.len();
+        if l < AeadCipher::CIPHERTEXT_EXPANSION {
+            return Err(DecryptionError::CiphertextLengthError(l));
+        }
+
+        let pt_l = l - AeadCipher::CIPHERTEXT_EXPANSION;
+
+        let mut pt = vec![0u8; pt_l];
+
+        self.decrypt(ciphertext, &mut pt)?;
+
+        Ok(pt)
+    }
 }
 
 impl SerializableCleartextContent for AeadCipher {
@@ -240,8 +260,10 @@ mod tests {
         cipher.encrypt(plaintext, &mut ciphertext).unwrap();
 
         cipher.decrypt(&ciphertext, &mut dec_result).unwrap();
+        let pt_vec = cipher.decrypt_to_vec(&ciphertext).unwrap();
 
         assert_eq!(plaintext, &dec_result[..]);
+        assert_eq!(plaintext, &pt_vec[..]);
     }
 
     fn ciphertext_integrity(tampered_byte_index: usize) {
@@ -291,6 +313,11 @@ mod tests {
             .decrypt(&ciphertext[0..1], &mut dec_result)
             .unwrap_err()
         {
+            DecryptionError::CiphertextLengthError(_) => (),
+            _ => panic!("Invalid Error"),
+        }
+
+        match cipher.decrypt_to_vec(&ciphertext[0..1]).unwrap_err() {
             DecryptionError::CiphertextLengthError(_) => (),
             _ => panic!("Invalid Error"),
         }

@@ -82,7 +82,7 @@ impl Prg {
     ///
     /// prg.fill_pseudo_random_bytes(&mut buf);
     /// prg.fill_offset_pseudo_random_bytes(2, &mut buf_offset);
-    /// # assert_eq!(&buf[2..], &buf_offset[..]);
+    /// assert_eq!(&buf[2..], &buf_offset[..]);
     /// ```
     pub fn fill_offset_pseudo_random_bytes(
         &self,

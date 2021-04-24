@@ -1,5 +1,7 @@
 //! Errors
 use thiserror::Error;
+
+use crate::serialization;
 /// Encryption error
 #[derive(Error, Debug)]
 pub enum EncryptionError {
@@ -33,4 +35,17 @@ pub enum DecryptionError {
     /// Opaque error during the encryption
     #[error("Decryption Error - Inner Error")]
     InnerError(),
+}
+
+/// Error during unwrapping a cryptographic object
+#[derive(Error, Debug)]
+pub enum UnwrappingError {
+    /// Decryption error
+    #[error("UnwrappingError - error during decryption: {0}")]
+    DecryptionError(#[from] DecryptionError),
+    /// Deserialization error
+    #[error("UnwrappingError - error during deserialization: {0}")]
+    DeserializationError(
+        #[from] serialization::errors::CleartextDeserializationError,
+    ),
 }

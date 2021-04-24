@@ -8,5 +8,9 @@ pub(crate) mod cleartext_serialization;
 /// Tags identifying the different object types
 pub(crate) mod tags;
 
+pub mod wrapper;
+
+pub use wrapper::*;
+
 #[cfg(test)]
 mod tests;

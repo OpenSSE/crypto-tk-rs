@@ -83,7 +83,7 @@ impl SerializationTag {
     }
 }
 
-pub(crate) trait SerializationTaggedType {
+pub trait SerializationTaggedType {
     fn serialization_tag() -> SerializationTag;
 }
 
@@ -141,7 +141,7 @@ impl SerializationTaggedType for AeadCipher {
     }
 }
 
-pub(crate) trait SerializationTagged {
+pub trait SerializationTagged {
     fn serialization_tag(&self) -> SerializationTag;
 }
 
