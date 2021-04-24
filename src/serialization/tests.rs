@@ -2,16 +2,21 @@ use super::cleartext_serialization::*;
 use crate::*;
 use std::io::Cursor;
 
-#[test]
-fn prf_serialization() {
-    let prf = Prf::new();
-
+fn ser_deser<T: DeserializableCleartext + SerializableCleartext>(
+    object: &T,
+) -> T {
     let mut ser_buffer = vec![];
-    let written_bytes = prf.serialize_cleartext(&mut ser_buffer).unwrap();
+    let written_bytes = object.serialize_cleartext(&mut ser_buffer).unwrap();
 
     assert_eq!(written_bytes, ser_buffer.len());
     let mut cursor = Cursor::new(ser_buffer);
-    let deser_prf = Prf::deserialize_cleartext(&mut cursor).unwrap();
+    T::deserialize_cleartext(&mut cursor).unwrap()
+}
+
+#[test]
+fn prf_serialization() {
+    let prf = Prf::new();
+    let deser_prf = ser_deser(&prf);
 
     let input = 0u64.to_le_bytes();
     let mut eval_1 = [0u8; 32];
@@ -26,13 +31,7 @@ fn prf_serialization() {
 #[test]
 fn prg_serialization() {
     let prg = Prg::new();
-
-    let mut ser_buffer = vec![];
-    let written_bytes = prg.serialize_cleartext(&mut ser_buffer).unwrap();
-
-    assert_eq!(written_bytes, ser_buffer.len());
-    let mut cursor = Cursor::new(ser_buffer);
-    let deser_prg = Prg::deserialize_cleartext(&mut cursor).unwrap();
+    let deser_prg = ser_deser(&prg);
 
     let mut eval_1 = [0u8; 32];
     let mut eval_2 = [0u8; 32];
@@ -46,14 +45,7 @@ fn prg_serialization() {
 #[test]
 fn key_derivation_prg_serialization() {
     let prg = KeyDerivationPrg::<Key256>::new();
-
-    let mut ser_buffer = vec![];
-    let written_bytes = prg.serialize_cleartext(&mut ser_buffer).unwrap();
-
-    assert_eq!(written_bytes, ser_buffer.len());
-    let mut cursor = Cursor::new(ser_buffer);
-    let deser_prg =
-        KeyDerivationPrg::<Key256>::deserialize_cleartext(&mut cursor).unwrap();
+    let deser_prg = ser_deser(&prg);
 
     let k1 = prg.derive_key(0);
     let k2 = deser_prg.derive_key(0);
@@ -64,13 +56,7 @@ fn key_derivation_prg_serialization() {
 #[test]
 fn rcprf_serialization() {
     let rcprf = RcPrf::new(8).unwrap();
-
-    let mut ser_buffer = vec![];
-    let written_bytes = rcprf.serialize_cleartext(&mut ser_buffer).unwrap();
-
-    assert_eq!(written_bytes, ser_buffer.len());
-    let mut cursor = Cursor::new(ser_buffer);
-    let deser_rcprf = RcPrf::deserialize_cleartext(&mut cursor).unwrap();
+    let deser_rcprf = ser_deser(&rcprf);
 
     let mut out1 = [0u8; 32];
     let mut out2 = [0u8; 32];
@@ -92,16 +78,7 @@ fn constrained_rcprf_serialization() {
         for end in start..=max_leaf_index(h) {
             let range = RcPrfRange::new(start, end);
             let constrained_rcprf = rcprf.constrain(&range).unwrap();
-
-            let mut ser_buffer = vec![];
-            let written_bytes = constrained_rcprf
-                .serialize_cleartext(&mut ser_buffer)
-                .unwrap();
-
-            assert_eq!(written_bytes, ser_buffer.len());
-            let mut cursor = Cursor::new(ser_buffer);
-            let deser_constrained_rcprf =
-                ConstrainedRcPrf::deserialize_cleartext(&mut cursor).unwrap();
+            let deser_constrained_rcprf = ser_deser(&constrained_rcprf);
 
             let constrained_eval_0: Vec<[u8; 16]> = (start..=end)
                 .map(|x| {
@@ -133,12 +110,7 @@ fn cipher_serialization() {
     let k = Key256::new();
     let cipher = Cipher::from_key(k);
 
-    let mut ser_buffer = vec![];
-    let written_bytes = cipher.serialize_cleartext(&mut ser_buffer).unwrap();
-    assert_eq!(written_bytes, ser_buffer.len());
-
-    let mut cursor = Cursor::new(ser_buffer);
-    let deser_cipher = Cipher::deserialize_cleartext(&mut cursor).unwrap();
+    let deser_cipher = ser_deser(&cipher);
 
     let plaintext = TEST_PLAINTEXT;
     let mut ciphertext =
@@ -157,12 +129,7 @@ fn aead_cipher_serialization() {
     let k = Key256::new();
     let cipher = AeadCipher::from_key(k);
 
-    let mut ser_buffer = vec![];
-    let written_bytes = cipher.serialize_cleartext(&mut ser_buffer).unwrap();
-    assert_eq!(written_bytes, ser_buffer.len());
-
-    let mut cursor = Cursor::new(ser_buffer);
-    let deser_cipher = AeadCipher::deserialize_cleartext(&mut cursor).unwrap();
+    let deser_cipher = ser_deser(&cipher);
 
     let plaintext = TEST_PLAINTEXT;
     let mut ciphertext =
