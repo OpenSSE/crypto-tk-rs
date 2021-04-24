@@ -184,10 +184,8 @@ impl RcPrfRange {
         let r_start: u64 = match r.start_bound() {
             Unbounded => 0,
             Included(&a) if self.max() >= a => a,
-            Excluded(&a) if self.max() > a => a + 1, /* if the condition is
-                                                       * true, we are sure
-                                                       * that a+1 is not
-                                                       * overflowing */
+            Excluded(&a) if self.max() > a => a + 1,
+            // if the condition is true, we are sure that a+1 is not overflowing
             _ => {
                 intersects = false;
                 0
@@ -197,10 +195,9 @@ impl RcPrfRange {
         let r_end: u64 = match r.end_bound() {
             Unbounded => u64::max_value(),
             Included(&a) if self.min() <= a => a,
-            Excluded(&a) if self.min() < a => a - 1, /* if the condition is
-                                                       * true, we are sure
-                                                       * that a-1 is not
-                                                       * underflowing */
+            Excluded(&a) if self.min() < a => a - 1,
+            // if the condition is true, we are sure that a-1 is not
+            // underflowing
             _ => {
                 intersects = false;
                 0

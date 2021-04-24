@@ -29,7 +29,6 @@ use zeroize::Zeroize;
 /// For each block, we use the input as Blake2's input, the PRF key as its key,
 /// the block's index as salt, and the total length as personalization.
 /// Those last two parameters are little-endian encoded.
-///
 #[derive(Zeroize)]
 #[zeroize(drop)]
 pub struct Prf {

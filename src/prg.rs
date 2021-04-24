@@ -30,7 +30,6 @@ use std::vec::Vec;
 /// the PRF uses a hash function, a primitive that is way more complicated than
 /// a block cipher or a stream cipher. For the actual difference on your
 /// platform, run `cargo bench`.
-///
 #[derive(Zeroize)]
 #[zeroize(drop)]
 pub struct Prg {
