@@ -28,7 +28,8 @@ impl CryptoWrapper {
         }
     }
 
-    /// Wrap an object to a ciphertext: serialize the object and encrypt the resulting bytes
+    /// Wrap an object to a ciphertext: serialize the object and encrypt the
+    /// resulting bytes
     pub fn wrap<T: Wrappable>(&self, object: &T) -> Vec<u8> {
         // try to avoid reallocations by constructing a vector with the right
         // length from the beginning

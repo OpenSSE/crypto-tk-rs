@@ -182,8 +182,9 @@ impl AeadCipher {
         Ok(())
     }
 
-    /// Decrypt a byte slice and returns the result of the decryption as a vector of byte. Returns an error if
-    /// `ciphertext`'s length is smaller than `CIPHERTEXT_EXPANSION` bytes
+    /// Decrypt a byte slice and returns the result of the decryption as a
+    /// vector of byte. Returns an error if `ciphertext`'s length is smaller
+    /// than `CIPHERTEXT_EXPANSION` bytes
     pub fn decrypt_to_vec(
         &self,
         ciphertext: &[u8],
