@@ -19,6 +19,7 @@ default = ["rayon"]
 criterion = "0.3"
 strum = "0.20"
 strum_macros = "0.20"
+hex = "0.4.3"
 
 [[bench]]
 name = "benchmarks"
@@ -27,7 +28,7 @@ harness = false
 [dependencies]
 zeroize = {version = "^1.1", features = ["zeroize_derive"]}
 rand = "^0.7.0"
-blake2b_simd = "^0.5.10"
+blake2b_simd = "^1.0.0"
 chacha20 = "^0.6.0"
 chacha20poly1305 = "^0.7.1"
 clear_on_drop = "^0.2.3"

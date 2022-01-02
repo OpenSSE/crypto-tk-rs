@@ -27,6 +27,7 @@ mod insecure_clone;
 pub mod aead_cipher;
 pub mod cipher;
 pub mod errors;
+pub mod hash;
 pub mod key;
 pub mod prf;
 pub mod prg;
