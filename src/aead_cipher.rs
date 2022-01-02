@@ -110,14 +110,14 @@ impl AeadCipher {
 
         let encryption_key = self.key_derivation_prf.derive_key(&iv);
         let cipher =
-            ChaCha20Poly1305::new_varkey(&encryption_key.content()).unwrap();
+            ChaCha20Poly1305::new_varkey(encryption_key.content()).unwrap();
 
         let inner_nonce =
             Nonce::from_slice(&iv[..AeadCipher::CHACHA20_NONCE_LENGTH]);
 
         let tag = cipher
             .encrypt_in_place_detached(
-                &inner_nonce,
+                inner_nonce,
                 b"",
                 &mut ciphertext[AeadCipher::NONCE_SIZE
                     ..(AeadCipher::NONCE_SIZE + plaintext.len())],
@@ -163,16 +163,16 @@ impl AeadCipher {
             &ciphertext[AeadCipher::NONCE_SIZE..l - AeadCipher::TAG_LENGTH],
         );
 
-        let encryption_key = self.key_derivation_prf.derive_key(&iv);
+        let encryption_key = self.key_derivation_prf.derive_key(iv);
         let cipher =
-            ChaCha20Poly1305::new_varkey(&encryption_key.content()).unwrap();
+            ChaCha20Poly1305::new_varkey(encryption_key.content()).unwrap();
 
         let inner_nonce =
             Nonce::from_slice(&iv[..AeadCipher::CHACHA20_NONCE_LENGTH]);
 
         cipher
             .decrypt_in_place_detached(
-                &inner_nonce,
+                inner_nonce,
                 b"",
                 &mut plaintext[..real_plaintext_length],
                 tag,

@@ -45,7 +45,7 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfLeafElement {
     ) {
         debug_assert_eq!(range.min(), self.index);
         debug_assert_eq!(range.max(), self.index);
-        self.unchecked_eval(range.min(), &mut outputs[0])
+        self.unchecked_eval(range.min(), outputs[0])
     }
 
     #[cfg(feature = "rayon")]

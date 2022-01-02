@@ -107,7 +107,7 @@ impl Cipher {
         let inner_nonce =
             Nonce::from_slice(&iv[..Cipher::CHACHA20_NONCE_LENGTH]);
         let mut cipher =
-            ChaCha20::new_var(&encryption_key.content(), inner_nonce).unwrap();
+            ChaCha20::new_var(encryption_key.content(), inner_nonce).unwrap();
 
         cipher.apply_keystream(
             &mut ciphertext
@@ -146,11 +146,11 @@ impl Cipher {
         plaintext[..real_plaintext_length]
             .copy_from_slice(&ciphertext[Cipher::NONCE_SIZE..]);
 
-        let encryption_key = self.key_derivation_prf.derive_key(&iv);
+        let encryption_key = self.key_derivation_prf.derive_key(iv);
         let inner_nonce =
             Nonce::from_slice(&iv[..Cipher::CHACHA20_NONCE_LENGTH]);
         let mut cipher =
-            ChaCha20::new_var(&encryption_key.content(), inner_nonce).unwrap();
+            ChaCha20::new_var(encryption_key.content(), inner_nonce).unwrap();
 
         cipher.apply_keystream(&mut plaintext[..real_plaintext_length]);
 

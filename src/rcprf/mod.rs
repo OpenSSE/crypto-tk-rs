@@ -214,10 +214,10 @@ impl private::UncheckedRangePrf for ConstrainedRcPrf {
         for elt in &self.elements {
             if let Some(r) = elt.range().intersection(range) {
                 let r_width = r.width() as usize;
-                let (mut left_slice, right_slice) =
+                let (left_slice, right_slice) =
                     current.split_at_mut(r_width);
                 current = right_slice;
-                elt.eval_range(&r, &mut left_slice).unwrap();
+                elt.eval_range(&r, left_slice).unwrap();
             }
         }
     }
@@ -233,11 +233,11 @@ impl private::UncheckedRangePrf for ConstrainedRcPrf {
             for elt in &self.elements {
                 if let Some(r) = elt.range().intersection(range) {
                     let r_width = r.width() as usize;
-                    let (mut left_slice, right_slice) =
+                    let (left_slice, right_slice) =
                         current.split_at_mut(r_width);
                     current = right_slice;
                     s.spawn(move |_| {
-                        elt.par_eval_range(&r, &mut left_slice).unwrap();
+                        elt.par_eval_range(&r, left_slice).unwrap();
                     });
                 }
             }
