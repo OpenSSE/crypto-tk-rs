@@ -39,6 +39,7 @@ pub mod utils;
 pub use crate::aead_cipher::*;
 pub use crate::cipher::*;
 pub use crate::errors::*;
+pub use crate::hash::*;
 pub use crate::key::*;
 pub use crate::prf::*;
 pub use crate::prg::*;
