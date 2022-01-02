@@ -65,8 +65,6 @@ impl Prf {
     /// In this implementation based on Blake2b, the counter is input as the
     /// salt of the PRF evaluation.
     pub fn fill_bytes(&self, input: &[u8], output: &mut [u8]) {
-        let mut hash: blake2b_simd::Hash;
-
         let mut remaining_length = output.len();
         let mut written_bytes = 0;
         let tot_output_len: u64 = output.len() as u64;
@@ -84,9 +82,8 @@ impl Prf {
             let mut state = params.to_state();
             state.update(input);
 
-            hash = state.finalize();
             output[written_bytes..written_bytes + out_length]
-                .copy_from_slice(hash.as_bytes());
+                .copy_from_slice(state.finalize().as_bytes());
 
             // cleanup
             params.clear();
