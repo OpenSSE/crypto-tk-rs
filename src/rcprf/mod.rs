@@ -8,6 +8,7 @@ use crate::key::Key256;
 use crate::prg::KeyDerivationPrg;
 use crate::serialization::cleartext_serialization::*;
 use crate::serialization::errors::*;
+use crate::Key;
 
 // use clear_on_drop::clear::Clear;
 use zeroize::Zeroize;
@@ -142,6 +143,12 @@ impl RcPrf {
     /// Returns a new RcPrf based on a tree of height `height`, with a random
     /// root.
     pub fn new(height: u8) -> Result<Self, String> {
+        Self::from_key(Key256::new(), height)
+    }
+
+    /// Returns a new RcPrf based on a tree of height `height`, with the given
+    /// root key.
+    pub fn from_key(root: Key256, height: u8) -> Result<Self, String> {
         if height > MAX_HEIGHT {
             return Err(format!(
                 "RcPrf height is too large ({}). The maximum height is {}.",
@@ -150,7 +157,7 @@ impl RcPrf {
         }
         Ok(RcPrf {
             root: ConstrainedRcPrfInnerElement {
-                prg: KeyDerivationPrg::new(),
+                prg: KeyDerivationPrg::from_key(root),
                 rcprf_height: height,
                 range: RcPrfRange::from(0..=max_leaf_index(height)),
                 subtree_height: height,
