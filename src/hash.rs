@@ -1,7 +1,8 @@
 //! Hashing value to bytes
 
-/// A finalized hash value with constant-time equality and an accessible `u8` representation
-/// This implementation uses Blake2b, and the `blake2b_simd` crate.
+/// A finalized hash value with constant-time equality and an accessible `u8`
+/// representation This implementation uses Blake2b, and the `blake2b_simd`
+/// crate.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Hash {
     inner: blake2b_simd::Hash,
