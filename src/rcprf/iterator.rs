@@ -74,6 +74,36 @@ impl DoubleEndedIterator for RcPrfIterator {
 
 impl ExactSizeIterator for RcPrfIterator {}
 
+/// Iterator for key-derivation range-constrained PRF
+pub struct KeyDerivationRcPrfIterator<KeyType: Key> {
+    pub(crate) inner: RcPrfIterator,
+    pub(crate) _marker: std::marker::PhantomData<KeyType>,
+}
+
+impl<KeyType: Key> Iterator for KeyDerivationRcPrfIterator<KeyType> {
+    type Item = (u64, KeyType);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner
+            .next()
+            .map(|(i, mut buf)| (i, KeyType::from_slice(buf.as_mut())))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
+}
+
+impl<KeyType: Key> DoubleEndedIterator for KeyDerivationRcPrfIterator<KeyType> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.inner
+            .next_back()
+            .map(|(i, mut buf)| (i, KeyType::from_slice(buf.as_mut())))
+    }
+}
+
+impl<KeyType: Key> ExactSizeIterator for KeyDerivationRcPrfIterator<KeyType> {}
+
 /// Parallel iterator for RcPrfs
 #[cfg(feature = "rayon")]
 pub struct RcPrfParallelIterator {
@@ -85,6 +115,24 @@ impl RcPrfParallelIterator {
     /// Create a new parallel iterator for RcPrfs from a regular one
     pub fn new(base: RcPrfIterator) -> Self {
         RcPrfParallelIterator { base }
+    }
+}
+
+/// Parallel iterator for RcPrfs meant for key derivations
+#[cfg(feature = "rayon")]
+pub struct KeyDerivationRcPrfParallelIterator<KeyType: Key> {
+    pub(crate) inner: RcPrfParallelIterator,
+    pub(crate) _marker: std::marker::PhantomData<KeyType>,
+}
+
+#[cfg(feature = "rayon")]
+impl<KeyType: Key> KeyDerivationRcPrfParallelIterator<KeyType> {
+    /// Create a new parallel iterator for RcPrfs from a regular one
+    pub fn new(inner: RcPrfParallelIterator) -> Self {
+        KeyDerivationRcPrfParallelIterator::<KeyType> {
+            inner,
+            _marker: std::marker::PhantomData,
+        }
     }
 }
 
@@ -191,6 +239,69 @@ pub mod parallel_iterator {
                 RcPrfIterator {
                     node_queue: right_deque,
                     output_size: self.output_size,
+                },
+            )
+        }
+    }
+
+    impl<KeyType: Key + Send> ParallelIterator
+        for KeyDerivationRcPrfParallelIterator<KeyType>
+    {
+        type Item = <KeyDerivationRcPrfIterator<KeyType> as Iterator>::Item;
+
+        fn drive_unindexed<C>(self, consumer: C) -> C::Result
+        where
+            C: UnindexedConsumer<Self::Item>,
+        {
+            bridge(self, consumer)
+        }
+
+        fn opt_len(&self) -> Option<usize> {
+            // Some(std::iter::ExactSizeIterator::len(self))
+            Some(self.inner.len())
+        }
+    }
+    impl<KeyType: Key + Send> IndexedParallelIterator
+        for KeyDerivationRcPrfParallelIterator<KeyType>
+    {
+        fn len(&self) -> usize {
+            // <Self as ExactSizeIterator>::len(self)
+            self.inner.len()
+        }
+
+        fn drive<C: Consumer<Self::Item>>(self, consumer: C) -> C::Result {
+            bridge(self, consumer)
+        }
+
+        fn with_producer<CB: ProducerCallback<Self::Item>>(
+            self,
+            callback: CB,
+        ) -> CB::Output {
+            callback.callback(KeyDerivationRcPrfIterator::<KeyType> {
+                inner: self.inner.base,
+                _marker: std::marker::PhantomData,
+            })
+        }
+    }
+
+    impl<KeyType: Key + Send> Producer for KeyDerivationRcPrfIterator<KeyType> {
+        type Item = <Self as Iterator>::Item;
+        type IntoIter = Self;
+
+        fn into_iter(self) -> Self::IntoIter {
+            self
+        }
+
+        fn split_at(self, index: usize) -> (Self, Self) {
+            let (left, right) = self.inner.split_at(index);
+            (
+                KeyDerivationRcPrfIterator::<KeyType> {
+                    inner: left,
+                    _marker: std::marker::PhantomData,
+                },
+                KeyDerivationRcPrfIterator::<KeyType> {
+                    inner: right,
+                    _marker: std::marker::PhantomData,
                 },
             )
         }

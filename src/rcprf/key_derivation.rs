@@ -100,12 +100,6 @@ impl<KeyType: Key> Zeroize for KeyDerivationRcPrf<KeyType> {
     }
 }
 
-impl<KeyType: Key> Drop for KeyDerivationRcPrf<KeyType> {
-    fn drop(&mut self) {
-        self.zeroize();
-    }
-}
-
 impl<KeyType: Key> key_derivation_private::InnerRangePrf
     for KeyDerivationRcPrf<KeyType>
 {
@@ -131,6 +125,29 @@ impl<KeyType: Key> KeyDerivationRcPrf<KeyType> {
             _marker: std::marker::PhantomData,
         })
     }
+
+    /// Returns an iterator of (`index`,`key`) pairs such that `key` is the
+    /// key derived from `index` by the RcPrf on `index`.
+    pub fn index_value_iter_range(
+        &self,
+        range: &RcPrfRange,
+    ) -> Result<iterator::KeyDerivationRcPrfIterator<KeyType>, String> {
+        let constrained_rcprf = self.constrain(range)?;
+        Ok(constrained_rcprf.into_index_value_iter())
+    }
+
+    /// Returns a parallel iterator of (`index`,`key`) pairs such that
+    /// `key` is the key derived from `index` by the RcPrf on `index`. This
+    /// iterator is to be used with the `rayon` crate.
+    #[cfg(feature = "rayon")]
+    pub fn index_value_par_iter_range(
+        &self,
+        range: &RcPrfRange,
+    ) -> Result<iterator::KeyDerivationRcPrfParallelIterator<KeyType>, String>
+    {
+        let constrained_rcprf = self.constrain(range)?;
+        Ok(constrained_rcprf.into_index_value_par_iter())
+    }
 }
 
 /// A Constrained RcPrf generating keys instead of bytes slices
@@ -145,12 +162,6 @@ impl<KeyType: Key> Zeroize for KeyDerivationConstrainedRcPrf<KeyType> {
     }
 }
 
-impl<KeyType: Key> Drop for KeyDerivationConstrainedRcPrf<KeyType> {
-    fn drop(&mut self) {
-        self.zeroize();
-    }
-}
-
 impl<KeyType: Key> key_derivation_private::InnerRangePrf
     for KeyDerivationConstrainedRcPrf<KeyType>
 {
@@ -161,11 +172,44 @@ impl<KeyType: Key> key_derivation_private::InnerRangePrf
     }
 }
 
+impl<KeyType: Key> KeyDerivationConstrainedRcPrf<KeyType> {
+    fn into_inner(self) -> ConstrainedRcPrf {
+        self.inner
+    }
+    /// Transform the constrained RcPrf into an iterator that produces pairs of
+    /// index and keys derived from that index.
+    pub fn into_index_value_iter(
+        self,
+    ) -> iterator::KeyDerivationRcPrfIterator<KeyType> {
+        let inner_rcprf = self.into_inner();
+        let inner = inner_rcprf.into_index_value_iter(KeyType::KEY_SIZE);
+        iterator::KeyDerivationRcPrfIterator::<KeyType> {
+            inner,
+            _marker: std::marker::PhantomData,
+        }
+    }
+
+    /// Transform the constrained RcPrf into a parallel iterator that can be
+    /// used with the `rayon` crate, and which produces pairs of index and
+    /// keys derived from that index.
+    #[cfg(feature = "rayon")]
+    pub fn into_index_value_par_iter(
+        self,
+    ) -> iterator::KeyDerivationRcPrfParallelIterator<KeyType> {
+        iterator::KeyDerivationRcPrfParallelIterator::<KeyType> {
+            inner: self
+                .into_inner()
+                .into_index_value_par_iter(KeyType::KEY_SIZE),
+            _marker: std::marker::PhantomData,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::KeyAccessor;
-
     use super::*;
+    use crate::KeyAccessor;
+    use rayon::iter::ParallelIterator;
 
     #[test]
     fn key_derivation_rcprf_consistency() {
@@ -188,13 +232,20 @@ mod tests {
             )
             .unwrap();
 
+        let iter_keys = key_derivation
+            .index_value_iter_range(&RcPrfRange::from(0..=max_leaf_index(h)))
+            .unwrap();
+
         let keys = key_derivation
             .derive_keys_range(&RcPrfRange::from(0..=max_leaf_index(h)))
             .unwrap();
 
-        keys.into_iter()
-            .zip(reference)
-            .for_each(|(k, reference)| assert_eq!(k.content(), reference));
+        keys.into_iter().zip(iter_keys).zip(reference).for_each(
+            |((k, (_i, k_iter)), reference)| {
+                assert_eq!(k.content(), reference);
+                assert_eq!(k_iter.content(), reference);
+            },
+        );
     }
 
     #[test]
@@ -222,8 +273,19 @@ mod tests {
             .par_derive_keys_range(&RcPrfRange::from(0..=max_leaf_index(h)))
             .unwrap();
 
+        let par_iter_keys: Vec<(u64, Key256)> = key_derivation
+            .index_value_par_iter_range(&RcPrfRange::from(
+                0..=max_leaf_index(h),
+            ))
+            .unwrap()
+            .collect();
+
         keys.into_iter()
+            .zip(par_iter_keys.into_iter())
             .zip(reference)
-            .for_each(|(k, reference)| assert_eq!(k.content(), reference));
+            .for_each(|((k, (_i, k_iter)), reference)| {
+                assert_eq!(k.content(), reference);
+                assert_eq!(k_iter.content(), reference);
+            });
     }
 }
