@@ -26,7 +26,11 @@ pub(crate) mod leaf_element;
 /// All the generators for the RcPrf
 pub mod iterator;
 
+/// Key generation from RcPrf
+pub mod key_derivation;
+
 use crate::inner_element::*;
+pub use crate::key_derivation::*;
 use crate::leaf_element::*;
 pub use crate::rcprf_range::*;
 pub use crate::traits::*;
