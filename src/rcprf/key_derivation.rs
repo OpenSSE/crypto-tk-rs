@@ -128,25 +128,25 @@ impl<KeyType: Key> KeyDerivationRcPrf<KeyType> {
 
     /// Returns an iterator of (`index`,`key`) pairs such that `key` is the
     /// key derived from `index` by the RcPrf on `index`.
-    pub fn index_value_iter_range(
+    pub fn key_range_iter(
         &self,
         range: &RcPrfRange,
     ) -> Result<iterator::KeyDerivationRcPrfIterator<KeyType>, String> {
         let constrained_rcprf = self.constrain(range)?;
-        Ok(constrained_rcprf.into_index_value_iter())
+        Ok(constrained_rcprf.into_key_iter())
     }
 
     /// Returns a parallel iterator of (`index`,`key`) pairs such that
     /// `key` is the key derived from `index` by the RcPrf on `index`. This
     /// iterator is to be used with the `rayon` crate.
     #[cfg(feature = "rayon")]
-    pub fn index_value_par_iter_range(
+    pub fn key_range_par_iter(
         &self,
         range: &RcPrfRange,
     ) -> Result<iterator::KeyDerivationRcPrfParallelIterator<KeyType>, String>
     {
         let constrained_rcprf = self.constrain(range)?;
-        Ok(constrained_rcprf.into_index_value_par_iter())
+        Ok(constrained_rcprf.into_key_par_iter())
     }
 }
 
@@ -178,11 +178,11 @@ impl<KeyType: Key> KeyDerivationConstrainedRcPrf<KeyType> {
     }
     /// Transform the constrained RcPrf into an iterator that produces pairs of
     /// index and keys derived from that index.
-    pub fn into_index_value_iter(
+    pub fn into_key_iter(
         self,
     ) -> iterator::KeyDerivationRcPrfIterator<KeyType> {
         let inner_rcprf = self.into_inner();
-        let inner = inner_rcprf.into_index_value_iter(KeyType::KEY_SIZE);
+        let inner = inner_rcprf.into_value_iter(KeyType::KEY_SIZE);
         iterator::KeyDerivationRcPrfIterator::<KeyType> {
             inner,
             _marker: std::marker::PhantomData,
@@ -193,13 +193,11 @@ impl<KeyType: Key> KeyDerivationConstrainedRcPrf<KeyType> {
     /// used with the `rayon` crate, and which produces pairs of index and
     /// keys derived from that index.
     #[cfg(feature = "rayon")]
-    pub fn into_index_value_par_iter(
+    pub fn into_key_par_iter(
         self,
     ) -> iterator::KeyDerivationRcPrfParallelIterator<KeyType> {
         iterator::KeyDerivationRcPrfParallelIterator::<KeyType> {
-            inner: self
-                .into_inner()
-                .into_index_value_par_iter(KeyType::KEY_SIZE),
+            inner: self.into_inner().into_value_par_iter(KeyType::KEY_SIZE),
             _marker: std::marker::PhantomData,
         }
     }
@@ -233,7 +231,7 @@ mod tests {
             .unwrap();
 
         let iter_keys = key_derivation
-            .index_value_iter_range(&RcPrfRange::from(0..=max_leaf_index(h)))
+            .key_range_iter(&RcPrfRange::from(0..=max_leaf_index(h)))
             .unwrap();
 
         let keys = key_derivation
@@ -274,9 +272,7 @@ mod tests {
             .unwrap();
 
         let par_iter_keys: Vec<(u64, Key256)> = key_derivation
-            .index_value_par_iter_range(&RcPrfRange::from(
-                0..=max_leaf_index(h),
-            ))
+            .key_range_par_iter(&RcPrfRange::from(0..=max_leaf_index(h)))
             .unwrap()
             .collect();
 

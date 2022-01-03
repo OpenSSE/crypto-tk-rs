@@ -183,7 +183,7 @@ mod rcprf_benches {
                 |b, &size| {
                     b.iter(|| {
                         let _: Vec<Vec<u8>> = rcprf
-                            .index_value_iter_range(
+                            .value_range_iter(
                                 &RcPrfRange::from(0..size as u64),
                                 16,
                             )
