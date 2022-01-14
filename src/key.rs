@@ -58,8 +58,6 @@ pub(crate) trait KeyAccessor {
 }
 
 /// A 256 bits (64 bytes) secret key. The key is zeroed upon drop.
-// #[derive(Zeroize)]
-// #[zeroize(drop)]
 pub struct Key256 {
     content: Zeroizing<[u8; 32]>,
     _marker: std::marker::PhantomPinned,

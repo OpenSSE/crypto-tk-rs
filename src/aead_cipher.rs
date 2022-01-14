@@ -1,10 +1,7 @@
 //! Authenticated Encryption
 
-use chacha20poly1305::{
-    aead::{AeadInPlace, NewAead},
-    Tag,
-};
-use chacha20poly1305::{ChaCha20Poly1305, Nonce};
+use chacha20poly1305::aead::{AeadInPlace, NewAead};
+use chacha20poly1305::{ChaCha20Poly1305, Nonce, Tag};
 
 // use clear_on_drop::clear_stack_on_return;
 use rand::RngCore;
@@ -110,7 +107,7 @@ impl AeadCipher {
 
         let encryption_key = self.key_derivation_prf.derive_key(&iv);
         let cipher =
-            ChaCha20Poly1305::new_varkey(encryption_key.content()).unwrap();
+            ChaCha20Poly1305::new_from_slice(encryption_key.content()).unwrap();
 
         let inner_nonce =
             Nonce::from_slice(&iv[..AeadCipher::CHACHA20_NONCE_LENGTH]);
@@ -165,7 +162,7 @@ impl AeadCipher {
 
         let encryption_key = self.key_derivation_prf.derive_key(iv);
         let cipher =
-            ChaCha20Poly1305::new_varkey(encryption_key.content()).unwrap();
+            ChaCha20Poly1305::new_from_slice(encryption_key.content()).unwrap();
 
         let inner_nonce =
             Nonce::from_slice(&iv[..AeadCipher::CHACHA20_NONCE_LENGTH]);
