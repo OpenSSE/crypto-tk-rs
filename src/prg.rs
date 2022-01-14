@@ -5,9 +5,7 @@ use crate::key::{Key, Key256, KeyAccessor};
 use crate::serialization::cleartext_serialization::*;
 use crate::serialization::errors::*;
 
-use chacha20::cipher::{
-    NewStreamCipher, SyncStreamCipher, SyncStreamCipherSeek,
-};
+use chacha20::cipher::{NewCipher, StreamCipher, StreamCipherSeek};
 use chacha20::ChaCha20;
 use clear_on_drop::clear_stack_on_return;
 use zeroize::Zeroize;
@@ -59,7 +57,7 @@ impl Prg {
         // use the stack-clearing interface from clear_on_drop
         clear_stack_on_return(1, || {
             let mut cipher =
-                ChaCha20::new_var(self.key.content(), &Self::PRG_NONCE)
+                ChaCha20::new_from_slices(self.key.content(), &Self::PRG_NONCE)
                     .unwrap();
 
             // set the bytes of the buffer to 0
@@ -93,7 +91,7 @@ impl Prg {
         // use the stack-clearing interface from clear_on_drop
         clear_stack_on_return(1, || {
             let mut cipher =
-                ChaCha20::new_var(self.key.content(), &Self::PRG_NONCE)
+                ChaCha20::new_from_slices(self.key.content(), &Self::PRG_NONCE)
                     .unwrap();
 
             cipher.seek(offset);

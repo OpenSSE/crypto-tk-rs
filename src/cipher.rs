@@ -2,7 +2,7 @@
 
 use chacha20::ChaCha20;
 use chacha20::{
-    cipher::{NewStreamCipher, SyncStreamCipher},
+    cipher::{NewCipher, StreamCipher},
     Nonce,
 };
 
@@ -107,7 +107,8 @@ impl Cipher {
         let inner_nonce =
             Nonce::from_slice(&iv[..Cipher::CHACHA20_NONCE_LENGTH]);
         let mut cipher =
-            ChaCha20::new_var(encryption_key.content(), inner_nonce).unwrap();
+            ChaCha20::new_from_slices(encryption_key.content(), inner_nonce)
+                .unwrap();
 
         cipher.apply_keystream(
             &mut ciphertext
@@ -150,7 +151,8 @@ impl Cipher {
         let inner_nonce =
             Nonce::from_slice(&iv[..Cipher::CHACHA20_NONCE_LENGTH]);
         let mut cipher =
-            ChaCha20::new_var(encryption_key.content(), inner_nonce).unwrap();
+            ChaCha20::new_from_slices(encryption_key.content(), inner_nonce)
+                .unwrap();
 
         cipher.apply_keystream(&mut plaintext[..real_plaintext_length]);
 

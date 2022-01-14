@@ -2,10 +2,9 @@ use std::convert::TryFrom;
 
 use super::errors::*;
 
+use crate::{rcprf::*, AeadCipher, Cipher, Key, KeyDerivationPrg, Prf, Prg};
 #[cfg(test)]
 use {strum::IntoEnumIterator, strum_macros::EnumIter};
-
-use crate::{rcprf::*, AeadCipher, Cipher, Key, KeyDerivationPrg, Prf, Prg};
 
 /// Tag encoding the type of a serialized cryptographic object
 #[derive(Clone, Copy, Debug, PartialEq)]
