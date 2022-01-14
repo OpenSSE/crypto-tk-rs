@@ -17,7 +17,7 @@ default = ["rayon"]
 
 [dev-dependencies]
 criterion = "0.3"
-strum = "0.20"
+strum = "0.23"
 strum_macros = "0.20"
 hex = "0.4.3"
 
