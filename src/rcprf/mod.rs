@@ -1,6 +1,5 @@
 //! Range-constrained PRF
 
-use either::Either;
 use std::pin::Pin;
 
 use crate::insecure_clone::private::InsecureClone;
@@ -8,6 +7,8 @@ use crate::key::Key256;
 use crate::prg::KeyDerivationPrg;
 use crate::serialization::cleartext_serialization::*;
 use crate::serialization::errors::*;
+use crate::tags::SerializationTag;
+use crate::tags::SerializationTaggedType;
 use crate::Key;
 
 // use clear_on_drop::clear::Clear;
@@ -405,24 +406,32 @@ impl DeserializableCleartextContent for ConstrainedRcPrf {
 
         let mut elements = vec![];
 
-        type EitherLoc =
-            Either<ConstrainedRcPrfLeafElement, ConstrainedRcPrfInnerElement>;
-
         for i in 0..elt_count {
-            let elt: Pin<Box<dyn private::RcPrfElement>> =
-                match deserialize_either_cleartext::<
-                    ConstrainedRcPrfLeafElement,
-                    ConstrainedRcPrfInnerElement,
-                >(reader)
-                .map_err(|e| {
-                    CleartextContentDeserializationError::ContentError(
-                        format!("Issue when deserializing the {}-th element of the constrained RCPRF: {}", i, e)
+            let tag =
+                SerializationTag::read_tag(reader).map_err(|err| CleartextContentDeserializationError::ContentError(
+                        format!("Issue when deserializing the {}-th element of the constrained RCPRF -- error while reading the tag:\n{}", i, err)))?;
+
+            let elt: Pin<Box<dyn private::RcPrfElement>> = match tag {
+                t if t == ConstrainedRcPrfLeafElement::serialization_tag() => {
+                    let elt = ConstrainedRcPrfLeafElement::deserialize_content(
+                        reader,
+                    )?;
+                    Box::pin(elt)
+                }
+                t if t == ConstrainedRcPrfInnerElement::serialization_tag() => {
+                    let elt =
+                        ConstrainedRcPrfInnerElement::deserialize_content(
+                            reader,
+                        )?;
+                    Box::pin(elt)
+                }
+                _ => {
+                    return Err(                    CleartextContentDeserializationError::ContentError(
+                        format!("Issue when deserializing the {}-th element of the constrained RCPRF: the tag of the element was neither ConstrainedRcPrfLeafElement, nor ConstrainedRcPrfInnerElement, but {:?}", i, tag)
                             ,
-                    )
-                })? {
-                    EitherLoc::Left(leaf) => Box::pin(leaf),
-                    EitherLoc::Right(inner) => Box::pin(inner),
-                };
+                    ))
+                }
+            };
 
             elements.push(elt);
         }

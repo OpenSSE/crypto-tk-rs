@@ -3,8 +3,6 @@ use crate::tags::SerializationTag;
 use super::errors::*;
 use super::tags::*;
 
-use either::Either;
-
 pub trait SerializableCleartextContent {
     fn serialization_content_byte_size(&self) -> usize;
     fn serialize_content(
@@ -62,23 +60,4 @@ pub trait DeserializableCleartext:
 impl<T> DeserializableCleartext for T where
     T: DeserializableCleartextContent + SerializationTaggedType
 {
-}
-
-pub fn deserialize_either_cleartext<U, V>(
-    reader: &mut dyn std::io::Read,
-) -> Result<Either<U, V>, CleartextDeserializationError>
-where
-    U: DeserializableCleartext,
-    V: DeserializableCleartext,
-{
-    let tag = SerializationTag::read_tag(reader)?;
-
-    let u_tag: SerializationTag = U::serialization_tag();
-    let v_tag: SerializationTag = V::serialization_tag();
-
-    match tag {
-        t if t == u_tag => Ok(Either::Left(U::deserialize_content(reader)?)),
-        t if t == v_tag => Ok(Either::Right(V::deserialize_content(reader)?)),
-        _ => Err(CleartextDeserializationError::InvalidTagError(tag)),
-    }
 }
