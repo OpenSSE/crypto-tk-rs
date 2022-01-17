@@ -58,18 +58,15 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfLeafElement {
         self.unchecked_eval_range(range, outputs)
     }
 
-    fn unchecked_constrain(
-        &self,
-        range: &RcPrfRange,
-    ) -> Result<ConstrainedRcPrf, String> {
+    fn unchecked_constrain(&self, range: &RcPrfRange) -> ConstrainedRcPrf {
         debug_assert_eq!(range.width(), 1);
         debug_assert_eq!(range.max(), self.index);
 
         // here, we do have to copy the PRF
         // We do so by getting the key and copying it
-        Ok(ConstrainedRcPrf {
+        ConstrainedRcPrf {
             elements: vec![Box::pin(self.insecure_clone())],
-        })
+        }
     }
 }
 

@@ -312,16 +312,13 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfInnerElement {
         }
     }
 
-    fn unchecked_constrain(
-        &self,
-        range: &RcPrfRange,
-    ) -> Result<ConstrainedRcPrf, String> {
+    fn unchecked_constrain(&self, range: &RcPrfRange) -> ConstrainedRcPrf {
         debug_assert!(self.range().contains_range(range));
 
         if self.range() == *range {
-            return Ok(ConstrainedRcPrf {
+            return ConstrainedRcPrf {
                 elements: vec![Box::pin(self.insecure_clone())],
-            });
+            };
         }
 
         if self.subtree_height() > 2 {
@@ -346,7 +343,7 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfInnerElement {
                         subtree_height: self.subtree_height() - 1,
                         rcprf_height: self.rcprf_height,
                     };
-                    Some(left_child.unchecked_constrain(&subrange).unwrap())
+                    Some(left_child.unchecked_constrain(&subrange))
                 }
             };
 
@@ -361,25 +358,27 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfInnerElement {
                         subtree_height: self.subtree_height() - 1,
                         rcprf_height: self.rcprf_height,
                     };
-                    Some(right_child.unchecked_constrain(&subrange).unwrap())
+                    Some(right_child.unchecked_constrain(&subrange))
                 }
             };
 
             match (left_constrained, right_constrained) {
-                (None, None) => Err(format!(
+                (None, None) => unreachable!(
                     "Error when constraining element of range {} on {}. Invalid
                 constrain.",
                     self.range(),
                     range
-                )),
-                (None, Some(constrained_rcprf)) => Ok(constrained_rcprf),
-                (Some(constrained_rcprf), None) => Ok(constrained_rcprf),
+                ),
+                (None, Some(constrained_rcprf)) => constrained_rcprf,
+                (Some(constrained_rcprf), None) => constrained_rcprf,
                 (
                     Some(mut constrained_rcprf_left),
                     Some(constrained_rcprf_right),
                 ) => {
-                    constrained_rcprf_left.merge(constrained_rcprf_right)?;
-                    Ok(constrained_rcprf_left)
+                    constrained_rcprf_left
+                        .merge(constrained_rcprf_right)
+                        .unwrap();
+                    constrained_rcprf_left
                 }
             }
         } else {
@@ -398,9 +397,9 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfInnerElement {
                 rcprf_height: self.rcprf_height,
             };
 
-            Ok(ConstrainedRcPrf {
+            ConstrainedRcPrf {
                 elements: vec![Box::pin(child_node)],
-            })
+            }
         }
     }
 }

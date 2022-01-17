@@ -5,6 +5,7 @@ use std::pin::Pin;
 use crate::insecure_clone::private::InsecureClone;
 use crate::key::Key256;
 use crate::prg::KeyDerivationPrg;
+use crate::rcprf::errors::*;
 use crate::serialization::cleartext_serialization::*;
 use crate::serialization::errors::*;
 use crate::tags::SerializationTag;
@@ -30,6 +31,10 @@ pub mod iterator;
 /// Key generation from RcPrf
 pub mod key_derivation;
 
+/// Specific error types
+pub mod errors;
+
+pub use crate::errors::*;
 use crate::inner_element::*;
 pub use crate::key_derivation::*;
 use crate::leaf_element::*;
@@ -131,10 +136,7 @@ impl private::UncheckedRangePrf for RcPrf {
         self.root.unchecked_par_eval_range(range, outputs)
     }
 
-    fn unchecked_constrain(
-        &self,
-        range: &RcPrfRange,
-    ) -> Result<ConstrainedRcPrf, String> {
+    fn unchecked_constrain(&self, range: &RcPrfRange) -> ConstrainedRcPrf {
         self.root.unchecked_constrain(range)
     }
 }
@@ -147,18 +149,15 @@ impl RangePrf for RcPrf {
 impl RcPrf {
     /// Returns a new RcPrf based on a tree of height `height`, with a random
     /// root.
-    pub fn new(height: u8) -> Result<Self, String> {
+    pub fn new(height: u8) -> Result<Self, RcPrfError> {
         Self::from_key(Key256::new(), height)
     }
 
     /// Returns a new RcPrf based on a tree of height `height`, with the given
     /// root key.
-    pub fn from_key(root: Key256, height: u8) -> Result<Self, String> {
+    pub fn from_key(root: Key256, height: u8) -> Result<Self, RcPrfError> {
         if height > MAX_HEIGHT {
-            return Err(format!(
-                "RcPrf height is too large ({}). The maximum height is {}.",
-                height, MAX_HEIGHT
-            ));
+            return Err(RcPrfError::InvalidTreeHeight(height, MAX_HEIGHT));
         }
         Ok(RcPrf {
             root: ConstrainedRcPrfInnerElement {
@@ -178,7 +177,7 @@ impl RcPrf {
         &self,
         range: &RcPrfRange,
         output_width: usize,
-    ) -> Result<iterator::RcPrfIterator, String> {
+    ) -> Result<iterator::RcPrfIterator, RcPrfError> {
         let constrained_rcprf = self.constrain(range)?;
 
         Ok(constrained_rcprf.into_value_iter(output_width))
@@ -194,7 +193,7 @@ impl RcPrf {
         &self,
         range: &RcPrfRange,
         output_width: usize,
-    ) -> Result<iterator::RcPrfParallelIterator, String> {
+    ) -> Result<iterator::RcPrfParallelIterator, RcPrfError> {
         let constrained_rcprf = self.constrain(range)?;
 
         Ok(constrained_rcprf.into_value_par_iter(output_width))
@@ -248,10 +247,7 @@ impl private::UncheckedRangePrf for ConstrainedRcPrf {
         });
     }
 
-    fn unchecked_constrain(
-        &self,
-        range: &RcPrfRange,
-    ) -> Result<ConstrainedRcPrf, String> {
+    fn unchecked_constrain(&self, range: &RcPrfRange) -> ConstrainedRcPrf {
         let mut constrained_rcprf = ConstrainedRcPrf {
             elements: Vec::new(),
         };
@@ -259,12 +255,12 @@ impl private::UncheckedRangePrf for ConstrainedRcPrf {
         for elt in &self.elements {
             if let Some(r) = elt.range().intersection(range) {
                 constrained_rcprf
-                    .merge(elt.unchecked_constrain(&r).unwrap())
+                    .merge(elt.unchecked_constrain(&r))
                     .unwrap();
             }
         }
 
-        Ok(constrained_rcprf)
+        constrained_rcprf
     }
 }
 
@@ -295,7 +291,7 @@ impl ConstrainedRcPrf {
     fn merge(
         &mut self,
         mut merged_rcprf: ConstrainedRcPrf,
-    ) -> Result<(), String> {
+    ) -> Result<(), RcPrfError> {
         // only proceed if the ranges are consecutive
 
         if self.elements.is_empty() {
@@ -317,10 +313,10 @@ impl ConstrainedRcPrf {
             self.elements = merged_rcprf.elements;
             return Ok(());
         }
-        Err(format!(
-            "Ranges of the RcPrfs to be merged are not consecutive: {} and {}",
+
+        Err(RcPrfError::NonConsecutiveMergeRanges(
             self.range(),
-            merged_rcprf.range()
+            merged_rcprf.range(),
         ))
     }
 
@@ -580,7 +576,7 @@ mod tests {
         let h = 8u8;
         let rcprf = RcPrf::new(h).unwrap();
         let mut output = [0u8; 16];
-        assert!(!rcprf.eval(max_leaf_index(h) + 1, &mut output).is_ok());
+        assert!(rcprf.eval(max_leaf_index(h) + 1, &mut output).is_err());
 
         const OUT_VEC_SIZE: usize = 8;
         let mut outs = vec![[0u8; 16]; OUT_VEC_SIZE];
@@ -588,7 +584,7 @@ mod tests {
             outs.iter_mut().map(|x| &mut x[..]).collect();
 
         // out of range error
-        assert!(!rcprf
+        assert!(rcprf
             .eval_range(
                 &RcPrfRange::from(
                     max_leaf_index(h)
@@ -596,11 +592,11 @@ mod tests {
                 ),
                 &mut slice
             )
-            .is_ok());
+            .is_err());
 
         // invalid vector size
-        assert!(!rcprf
+        assert!(rcprf
             .eval_range(&RcPrfRange::from(2..3), &mut slice)
-            .is_ok());
+            .is_err());
     }
 }

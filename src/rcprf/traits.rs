@@ -12,10 +12,7 @@ pub(crate) mod private {
             outputs: &mut [&mut [u8]],
         );
 
-        fn unchecked_constrain(
-            &self,
-            range: &RcPrfRange,
-        ) -> Result<ConstrainedRcPrf, String>;
+        fn unchecked_constrain(&self, range: &RcPrfRange) -> ConstrainedRcPrf;
 
         #[cfg(feature = "rayon")]
         fn unchecked_par_eval_range(
@@ -55,13 +52,9 @@ pub trait RangePrf: private::UncheckedRangePrf {
 
     /// Evaluate the PRF on the input `x` and put the result in `output`.
     /// Returns an error when the input is out of the PRF range.
-    fn eval(&self, x: u64, output: &mut [u8]) -> Result<(), String> {
+    fn eval(&self, x: u64, output: &mut [u8]) -> Result<(), RcPrfError> {
         if !self.range().contains_leaf(x) {
-            Err(format!(
-                "Evaluation point {} outside of valid range {}",
-                x,
-                self.range(),
-            ))
+            Err(RcPrfError::InvalidEvalPointError(x, self.range()))
         } else {
             self.unchecked_eval(x, output);
             Ok(())
@@ -76,19 +69,14 @@ pub trait RangePrf: private::UncheckedRangePrf {
         &self,
         range: &RcPrfRange,
         outputs: &mut [&mut [u8]],
-    ) -> Result<(), String> {
+    ) -> Result<(), RcPrfError> {
         if !self.range().contains_range(range) {
-            Err(format!(
-                "Invalid evaluation range: {} is not contained in the valid range {}",
-                range,
+            Err(RcPrfError::InvalidEvalRangeError(
+                range.clone(),
                 self.range(),
             ))
         } else if range.width() != outputs.len() as u64 {
-            Err(format!(
-                "Incompatible range width ({}) and outputs length ({}).",
-                range.width(),
-                outputs.len()
-            ))
+            Err(RcPrfError::InvalidRangeWidth(outputs.len(), range.width()))
         } else {
             self.unchecked_eval_range(range, outputs);
             Ok(())
@@ -104,19 +92,14 @@ pub trait RangePrf: private::UncheckedRangePrf {
         &self,
         range: &RcPrfRange,
         outputs: &mut [&mut [u8]],
-    ) -> Result<(), String> {
+    ) -> Result<(), RcPrfError> {
         if !self.range().contains_range(range) {
-            Err(format!(
-                "Invalid evaluation range: {} is not contained in the valid range {}",
-                range,
+            Err(RcPrfError::InvalidEvalRangeError(
+                range.clone(),
                 self.range(),
             ))
         } else if range.width() != outputs.len() as u64 {
-            Err(format!(
-                "Incompatible range width ({}) and outputs length ({}).",
-                range.width(),
-                outputs.len()
-            ))
+            Err(RcPrfError::InvalidRangeWidth(outputs.len(), range.width()))
         } else {
             self.unchecked_par_eval_range(range, outputs);
             Ok(())
@@ -128,15 +111,14 @@ pub trait RangePrf: private::UncheckedRangePrf {
     fn constrain(
         &self,
         range: &RcPrfRange,
-    ) -> Result<ConstrainedRcPrf, String> {
+    ) -> Result<ConstrainedRcPrf, RcPrfError> {
         if !self.range().contains_range(range) {
-            Err(format!(
-                "Invalid constrain range: {} is not contained in the valid range {}",
-                range,
+            Err(RcPrfError::InvalidConstrainRangeError(
+                range.clone(),
                 self.range(),
             ))
         } else {
-            self.unchecked_constrain(range)
+            Ok(self.unchecked_constrain(range))
         }
     }
 }

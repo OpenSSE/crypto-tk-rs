@@ -20,7 +20,7 @@ pub trait KeyDerivationRangePrf: key_derivation_private::InnerRangePrf {
 
     /// Evaluate the PRF on the input `x` and put the result in `output`.
     /// Returns an error when the input is out of the PRF range.
-    fn derive_key(&self, x: u64) -> Result<Self::KeyType, String> {
+    fn derive_key(&self, x: u64) -> Result<Self::KeyType, RcPrfError> {
         let mut buf = vec![0u8; Self::KeyType::KEY_SIZE];
         self.inner().eval(x, &mut buf)?;
         Ok(Self::KeyType::from_slice(buf.as_mut()))
@@ -36,7 +36,7 @@ pub trait KeyDerivationRangePrf: key_derivation_private::InnerRangePrf {
     fn derive_keys_range(
         &self,
         range: &RcPrfRange,
-    ) -> Result<Vec<Self::KeyType>, String> {
+    ) -> Result<Vec<Self::KeyType>, RcPrfError> {
         let l = range.width() as usize;
         let mut key_bufs = vec![vec![0u8; Self::KeyType::KEY_SIZE]; l];
         let mut slices: Vec<&mut [u8]> =
@@ -60,7 +60,7 @@ pub trait KeyDerivationRangePrf: key_derivation_private::InnerRangePrf {
     fn par_derive_keys_range(
         &self,
         range: &RcPrfRange,
-    ) -> Result<Vec<Self::KeyType>, String> {
+    ) -> Result<Vec<Self::KeyType>, RcPrfError> {
         let l = range.width() as usize;
         let mut key_bufs = vec![vec![0u8; Self::KeyType::KEY_SIZE]; l];
         let mut slices: Vec<&mut [u8]> =
@@ -78,7 +78,7 @@ pub trait KeyDerivationRangePrf: key_derivation_private::InnerRangePrf {
     fn constrain(
         &self,
         range: &RcPrfRange,
-    ) -> Result<KeyDerivationConstrainedRcPrf<Self::KeyType>, String> {
+    ) -> Result<KeyDerivationConstrainedRcPrf<Self::KeyType>, RcPrfError> {
         Ok(KeyDerivationConstrainedRcPrf::<Self::KeyType> {
             inner: self.inner().constrain(range)?,
             _marker: std::marker::PhantomData,
@@ -113,13 +113,13 @@ impl<KeyType: Key> key_derivation_private::InnerRangePrf
 impl<KeyType: Key> KeyDerivationRcPrf<KeyType> {
     /// Returns a new RcPrf based on a tree of height `height`, with a random
     /// root.
-    pub fn new(height: u8) -> Result<Self, String> {
+    pub fn new(height: u8) -> Result<Self, RcPrfError> {
         Self::from_key(Key256::new(), height)
     }
 
     /// Returns a new RcPrf based on a tree of height `height`, with the given
     /// root key.
-    pub fn from_key(root: Key256, height: u8) -> Result<Self, String> {
+    pub fn from_key(root: Key256, height: u8) -> Result<Self, RcPrfError> {
         Ok(KeyDerivationRcPrf::<KeyType> {
             inner: RcPrf::from_key(root, height)?,
             _marker: std::marker::PhantomData,
@@ -131,7 +131,7 @@ impl<KeyType: Key> KeyDerivationRcPrf<KeyType> {
     pub fn key_range_iter(
         &self,
         range: &RcPrfRange,
-    ) -> Result<iterator::KeyDerivationRcPrfIterator<KeyType>, String> {
+    ) -> Result<iterator::KeyDerivationRcPrfIterator<KeyType>, RcPrfError> {
         let constrained_rcprf = self.constrain(range)?;
         Ok(constrained_rcprf.into_key_iter())
     }
@@ -143,7 +143,7 @@ impl<KeyType: Key> KeyDerivationRcPrf<KeyType> {
     pub fn key_range_par_iter(
         &self,
         range: &RcPrfRange,
-    ) -> Result<iterator::KeyDerivationRcPrfParallelIterator<KeyType>, String>
+    ) -> Result<iterator::KeyDerivationRcPrfParallelIterator<KeyType>, RcPrfError>
     {
         let constrained_rcprf = self.constrain(range)?;
         Ok(constrained_rcprf.into_key_par_iter())
