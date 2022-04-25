@@ -9,7 +9,6 @@ use {strum::IntoEnumIterator, strum_macros::EnumIter};
 /// Tag encoding the type of a serialized cryptographic object
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(test, derive(EnumIter))]
-
 pub enum SerializationTag {
     Prf = 1,
     Prg,

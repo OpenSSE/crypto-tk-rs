@@ -96,8 +96,8 @@ impl Prf {
 
             state.clear();
 
-            remaining_length -= out_length;
-            written_bytes += out_length;
+            remaining_length = remaining_length.saturating_sub(out_length);
+            written_bytes = written_bytes.saturating_add(out_length);
             i += 1;
         }
     }

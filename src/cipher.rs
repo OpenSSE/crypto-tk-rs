@@ -86,7 +86,11 @@ impl Cipher {
         plaintext: &[u8],
         ciphertext: &mut [u8],
     ) -> Result<(), EncryptionError> {
-        if ciphertext.len() < plaintext.len() + Cipher::CIPHERTEXT_EXPANSION {
+        if ciphertext
+            .len()
+            .saturating_sub(Cipher::CIPHERTEXT_EXPANSION)
+            < plaintext.len()
+        {
             return Err(EncryptionError::CiphertextLengthError {
                 plaintext_length: plaintext.len(),
                 ciphertext_length: ciphertext.len(),
@@ -140,6 +144,7 @@ impl Cipher {
             });
         }
 
+        // The first test prevents an underflow
         let real_plaintext_length = l - Cipher::CIPHERTEXT_EXPANSION;
         let iv = &ciphertext[0..Cipher::NONCE_SIZE];
 

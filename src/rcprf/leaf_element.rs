@@ -88,9 +88,10 @@ impl RangePrf for ConstrainedRcPrfLeafElement {
 
 impl SerializableCleartextContent for ConstrainedRcPrfLeafElement {
     fn serialization_content_byte_size(&self) -> usize {
-        self.prf.serialization_content_byte_size()
-            + std::mem::size_of_val(&self.index)
-            + std::mem::size_of_val(&self.rcprf_height)
+        self.prf
+            .serialization_content_byte_size()
+            .saturating_add(std::mem::size_of_val(&self.index))
+            .saturating_add(std::mem::size_of_val(&self.rcprf_height))
     }
     fn serialize_content(
         &self,

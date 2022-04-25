@@ -27,8 +27,6 @@ impl From<std::ops::Range<u64>> for RcPrfRange {
 impl From<std::ops::RangeInclusive<u64>> for RcPrfRange {
     fn from(range: std::ops::RangeInclusive<u64>) -> Self {
         RcPrfRange::new(*range.start(), *range.end())
-
-        // RcPrfRange { range }
     }
 }
 
@@ -190,8 +188,9 @@ impl RcPrfRange {
         let r_start: u64 = match r.start_bound() {
             Bound::Unbounded => 0,
             Bound::Included(&a) if self.max() >= a => a,
+            // if the next condition is true, we are sure that a+1 is not
+            // overflowing as a < u64::MAX
             Bound::Excluded(&a) if self.max() > a => a + 1,
-            // if the condition is true, we are sure that a+1 is not overflowing
             _ => {
                 intersects = false;
                 0
@@ -201,9 +200,9 @@ impl RcPrfRange {
         let r_end: u64 = match r.end_bound() {
             Bound::Unbounded => u64::max_value(),
             Bound::Included(&a) if self.min() <= a => a,
+            // if the next condition is true, we are sure that a-1 is not
+            // underflowing as a > 0 <=> a > 1
             Bound::Excluded(&a) if self.min() < a => a - 1,
-            // if the condition is true, we are sure that a-1 is not
-            // underflowing
             _ => {
                 intersects = false;
                 0
@@ -248,6 +247,8 @@ impl RcPrfRange {
             Bound::Unbounded => self.max() == u64::max_value(),
             Bound::Included(&a) => self.max() >= a,
             Bound::Excluded(&0) => false,
+            // This never underflows as a >= 1 (the case a == 0) is already
+            // matched
             Bound::Excluded(&a) => self.max() >= a - 1,
         };
 

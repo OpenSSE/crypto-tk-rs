@@ -81,21 +81,11 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfInnerElement {
         let submin = self.range.min() + (child as u64) * half_width;
         let submax = submin + half_width;
         let r = RcPrfRange::from(submin..submax);
-        // println!("Subtree height {}", self.subtree_height());
-        // println!("Half width {}", half_width);
 
         debug_assert!(self.range().contains_range(&r), "{} {}", self.range, r);
         debug_assert_eq!(self.range().width() / 2, half_width);
 
         let subkey = self.prg.derive_key(child as u32);
-
-        // println!(
-        //     "{}",
-        //     match child {
-        //         RcPrfTreeNodeChild::LeftChild => "Left (0)",
-        //         _ => "Right (1)",
-        //     }
-        // );
 
         if self.subtree_height > 2 {
             let child_node = ConstrainedRcPrfInnerElement {
@@ -123,11 +113,6 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfInnerElement {
         range: &RcPrfRange,
         outputs: &mut [&mut [u8]],
     ) {
-        // range
-        //     .clone()
-        //     .range
-        //     .zip(outputs)
-        //     .try_for_each(|(i, out)| self.unchecked_eval(i, out))
         if self.subtree_height() > 2 {
             let half_width = 1u64 << (self.subtree_height() - 2);
             let mut out_offset = 0usize;

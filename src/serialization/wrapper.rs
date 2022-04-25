@@ -42,6 +42,8 @@ impl CryptoWrapper {
         object.serialize_cleartext(&mut buf.deref_mut().as_mut_slice())?;
 
         // encrypt it
+        // If the given length overflows, the call to 'encrypt' will return an
+        // error
         let mut ct = vec![0u8; plain_length + AeadCipher::CIPHERTEXT_EXPANSION];
 
         self.cipher.encrypt(&buf, &mut ct)?;

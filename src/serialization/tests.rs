@@ -184,6 +184,8 @@ where
     let deser_cipher = fun(&cipher);
 
     let plaintext = TEST_PLAINTEXT;
+    // If the given length overflows, the call to 'encrypt' will return an
+    // error
     let mut ciphertext =
         vec![0u8; plaintext.len() + Cipher::CIPHERTEXT_EXPANSION];
     let mut dec_result = vec![0u8; plaintext.len()];
@@ -215,6 +217,8 @@ where
     let deser_cipher = fun(&cipher);
 
     let plaintext = TEST_PLAINTEXT;
+    // If the given length overflows, the call to 'encrypt' will return an
+    // error
     let mut ciphertext =
         vec![0u8; plaintext.len() + AeadCipher::CIPHERTEXT_EXPANSION];
     let mut dec_result = vec![0u8; plaintext.len()];

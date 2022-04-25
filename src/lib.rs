@@ -23,9 +23,10 @@
 // // #![warn(clippy::restriction)]
 #![warn(clippy::expect_used)]
 #![warn(clippy::if_then_some_else_none)]
-// // This lint unfortunately has too many false positives
-// // #![warn(clippy::indexing_slicing)]
-// #![warn(clippy::integer_arithmetic)]
+// This lint unfortunately has too many false positives
+// #![warn(clippy::indexing_slicing)]
+// This next lint is useful to spot possible over/underflow issues, but is too
+// noisy in this crate #![warn(clippy::integer_arithmetic)]
 #![warn(clippy::cognitive_complexity)]
 #![warn(clippy::try_err)]
 #![warn(clippy::unimplemented)]
@@ -49,9 +50,6 @@
 //! This is code for a **research project**. It **should not be used in
 //! production**: the code lacks good Rust security practice, and it has
 //! never been externally reviewed.
-
-// #[cfg(all(test, feature = "with-bench"))]
-// extern crate test;
 
 mod insecure_clone;
 
