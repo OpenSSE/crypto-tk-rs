@@ -5,7 +5,7 @@ use crate::key::{Key, Key256, KeyAccessor};
 use crate::serialization::cleartext_serialization::*;
 use crate::serialization::errors::*;
 
-use chacha20::cipher::{NewCipher, StreamCipher, StreamCipherSeek};
+use chacha20::cipher::{KeyIvInit, StreamCipher, StreamCipherSeek};
 use chacha20::ChaCha20;
 use clear_on_drop::clear_stack_on_return;
 use zeroize::Zeroize;

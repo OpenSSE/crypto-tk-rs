@@ -2,7 +2,7 @@
 
 use chacha20::ChaCha20;
 use chacha20::{
-    cipher::{NewCipher, StreamCipher},
+    cipher::{KeyIvInit, StreamCipher},
     Nonce,
 };
 
