@@ -114,14 +114,12 @@ impl AeadCipher {
         let inner_nonce =
             Nonce::from_slice(&iv[..AeadCipher::CHACHA20_NONCE_LENGTH]);
 
-        let tag = cipher
-            .encrypt_in_place_detached(
-                inner_nonce,
-                b"",
-                &mut ciphertext[AeadCipher::NONCE_SIZE
-                    ..(AeadCipher::NONCE_SIZE + plaintext.len())],
-            )
-            .map_err(|_| EncryptionError::InnerError())?;
+        let tag = cipher.encrypt_in_place_detached(
+            inner_nonce,
+            b"",
+            &mut ciphertext[AeadCipher::NONCE_SIZE
+                ..(AeadCipher::NONCE_SIZE + plaintext.len())],
+        )?;
 
         ciphertext[(AeadCipher::NONCE_SIZE + plaintext.len())
             ..(AeadCipher::NONCE_SIZE
@@ -170,14 +168,12 @@ impl AeadCipher {
         let inner_nonce =
             Nonce::from_slice(&iv[..AeadCipher::CHACHA20_NONCE_LENGTH]);
 
-        cipher
-            .decrypt_in_place_detached(
-                inner_nonce,
-                b"",
-                &mut plaintext[..real_plaintext_length],
-                tag,
-            )
-            .map_err(|_| DecryptionError::InnerError())?;
+        cipher.decrypt_in_place_detached(
+            inner_nonce,
+            b"",
+            &mut plaintext[..real_plaintext_length],
+            tag,
+        )?;
 
         Ok(())
     }

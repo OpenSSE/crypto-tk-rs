@@ -21,18 +21,17 @@
 #![warn(clippy::todo)]
 #![warn(clippy::unwrap_in_result)]
 // // #![warn(clippy::restriction)]
-// #![warn(clippy::expect_used)]
-// #![warn(clippy::future_not_send)]
-// #![warn(clippy::if_then_some_else_none)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::if_then_some_else_none)]
 // // This lint unfortunately has too many false positives
 // // #![warn(clippy::indexing_slicing)]
 // #![warn(clippy::integer_arithmetic)]
-// #![warn(clippy::cognitive_complexity)]
-// #![warn(clippy::try_err)]
-// #![warn(clippy::unimplemented)]
+#![warn(clippy::cognitive_complexity)]
+#![warn(clippy::try_err)]
+#![warn(clippy::unimplemented)]
 // #![warn(clippy::unwrap_used)]
-// #![warn(clippy::use_debug)]
-// #![warn(clippy::map_err_ignore)]
+#![warn(clippy::use_debug)]
+#![warn(clippy::map_err_ignore)]
 
 //! A Rust toolkit for cryptographic primitives useful to implement
 //! cryptographic algorithms and protocols (in particular searchable

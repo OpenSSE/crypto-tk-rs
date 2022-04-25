@@ -15,7 +15,7 @@ pub enum EncryptionError {
     },
     /// Opaque error during the encryption
     #[error("Encryption Error - Inner Error")]
-    InnerError(),
+    InnerError(#[from] aead::Error),
 }
 
 /// Decryption error
@@ -34,7 +34,7 @@ pub enum DecryptionError {
     },
     /// Opaque error during the encryption
     #[error("Decryption Error - Inner Error")]
-    InnerError(),
+    InnerError(#[from] aead::Error),
 }
 
 /// Error during unwrapping a cryptographic object

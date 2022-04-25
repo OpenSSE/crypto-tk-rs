@@ -210,14 +210,9 @@ impl RcPrfRange {
             }
         };
 
-        if intersects {
-            Some(RcPrfRange::new(
-                r_start.max(self.min()),
-                r_end.min(self.max()),
-            ))
-        } else {
-            None
-        }
+        intersects.then(|| {
+            RcPrfRange::new(r_start.max(self.min()), r_end.min(self.max()))
+        })
     }
     /// Returns `true` if `r` is contained in the range
     ///
