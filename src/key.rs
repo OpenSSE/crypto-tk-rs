@@ -5,7 +5,6 @@ use crate::serialization::cleartext_serialization::*;
 use crate::serialization::errors::*;
 
 use rand::prelude::*;
-use std::ops::{Deref, DerefMut};
 
 use zeroize::{Zeroize, Zeroizing};
 
@@ -100,7 +99,7 @@ impl Key for Key256 {
             content: Zeroizing::new([0u8; 32]),
             _marker: std::marker::PhantomPinned,
         };
-        csprng.fill_bytes(k.content.deref_mut());
+        csprng.fill_bytes(&mut *k.content);
         k
     }
 
@@ -141,7 +140,7 @@ impl KeyAccessor for Key256 {
     /// Get the content of the key
     /// This accessor in only available to `crypto-tk` crate.
     fn content(&self) -> &[u8] {
-        self.content.deref()
+        &*self.content
     }
 }
 

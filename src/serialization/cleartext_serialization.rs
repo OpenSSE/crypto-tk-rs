@@ -50,10 +50,10 @@ pub trait DeserializableCleartext:
     ) -> Result<Self, CleartextDeserializationError> {
         let tag = SerializationTag::read_tag(reader)?;
 
-        if tag != Self::serialization_tag() {
-            Err(CleartextDeserializationError::InvalidTagError(tag))
-        } else {
+        if tag == Self::serialization_tag() {
             Ok(Self::deserialize_content(reader)?)
+        } else {
+            Err(CleartextDeserializationError::InvalidTagError(tag))
         }
     }
 }

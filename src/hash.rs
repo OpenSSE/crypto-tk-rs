@@ -13,6 +13,7 @@ impl Hash {
     pub const HASH_SIZE: usize = 64;
 
     /// Creates a new hash value from the input data
+    #[must_use]
     pub fn new(data: &[u8]) -> Hash {
         Hash {
             inner: blake2b_simd::blake2b(data),
@@ -34,6 +35,8 @@ impl PartialEq<[u8]> for Hash {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
+
     use super::*;
 
     const EMPTY_HASH: &str = "786a02f742015903c6c6fd852552d272912f4740e15847618a86e217f71f5419\

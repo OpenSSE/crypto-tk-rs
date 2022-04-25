@@ -81,21 +81,11 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfInnerElement {
         let submin = self.range.min() + (child as u64) * half_width;
         let submax = submin + half_width;
         let r = RcPrfRange::from(submin..submax);
-        // println!("Subtree height {}", self.subtree_height());
-        // println!("Half width {}", half_width);
 
         debug_assert!(self.range().contains_range(&r), "{} {}", self.range, r);
         debug_assert_eq!(self.range().width() / 2, half_width);
 
         let subkey = self.prg.derive_key(child as u32);
-
-        // println!(
-        //     "{}",
-        //     match child {
-        //         RcPrfTreeNodeChild::LeftChild => "Left (0)",
-        //         _ => "Right (1)",
-        //     }
-        // );
 
         if self.subtree_height > 2 {
             let child_node = ConstrainedRcPrfInnerElement {
@@ -104,7 +94,7 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfInnerElement {
                 subtree_height: self.subtree_height() - 1,
                 rcprf_height: self.rcprf_height,
             };
-            child_node.eval(leaf, output).unwrap();
+            child_node.unchecked_eval(leaf, output);
         } else {
             debug_assert_eq!(self.subtree_height, 2);
             debug_assert_eq!(half_width, 1);
@@ -114,7 +104,7 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfInnerElement {
                 index: r.min(),
                 rcprf_height: self.rcprf_height,
             };
-            child_node.eval(leaf, output).unwrap();
+            child_node.unchecked_eval(leaf, output);
         }
     }
 
@@ -123,11 +113,6 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfInnerElement {
         range: &RcPrfRange,
         outputs: &mut [&mut [u8]],
     ) {
-        // range
-        //     .clone()
-        //     .range
-        //     .zip(outputs)
-        //     .try_for_each(|(i, out)| self.unchecked_eval(i, out))
         if self.subtree_height() > 2 {
             let half_width = 1u64 << (self.subtree_height() - 2);
             let mut out_offset = 0usize;
@@ -149,9 +134,10 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfInnerElement {
                             subtree_height: self.subtree_height() - 1,
                             rcprf_height: self.rcprf_height,
                         };
-                        left_child
-                            .eval_range(&r, &mut outputs[0..r.width() as usize])
-                            .unwrap();
+                        left_child.unchecked_eval_range(
+                            &r,
+                            &mut outputs[0..r.width() as usize],
+                        );
                         out_offset = r.width() as usize;
                     }
                 }
@@ -173,13 +159,11 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfInnerElement {
                             subtree_height: self.subtree_height() - 1,
                             rcprf_height: self.rcprf_height,
                         };
-                        right_child
-                            .eval_range(
-                                &r,
-                                &mut outputs[out_offset
-                                    ..out_offset + r.width() as usize],
-                            )
-                            .unwrap();
+                        right_child.unchecked_eval_range(
+                            &r,
+                            &mut outputs
+                                [out_offset..out_offset + r.width() as usize],
+                        );
                     }
                 }
             }
@@ -251,8 +235,7 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfInnerElement {
                                     rcprf_height: self.rcprf_height,
                                 };
                                 left_child
-                                    .par_eval_range(&r, left_slice)
-                                    .unwrap();
+                                    .unchecked_par_eval_range(&r, left_slice);
                             });
                         }
                     }
@@ -275,7 +258,7 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfInnerElement {
                                 subtree_height: self.subtree_height() - 1,
                                 rcprf_height: self.rcprf_height,
                             };
-                            right_child.par_eval_range(&r, current).unwrap();
+                            right_child.unchecked_par_eval_range(&r, current);
                         }
                     }
                 }
@@ -369,12 +352,15 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfInnerElement {
                     self.range(),
                     range
                 ),
-                (None, Some(constrained_rcprf)) => constrained_rcprf,
-                (Some(constrained_rcprf), None) => constrained_rcprf,
+                (None, Some(constrained_rcprf))
+                | (Some(constrained_rcprf), None) => constrained_rcprf,
                 (
                     Some(mut constrained_rcprf_left),
                     Some(constrained_rcprf_right),
                 ) => {
+                    // We know that these RC-PRF have consecutive ranges, so no
+                    // panic happens here
+                    #[allow(clippy::unwrap_used)]
                     constrained_rcprf_left
                         .merge(constrained_rcprf_right)
                         .unwrap();

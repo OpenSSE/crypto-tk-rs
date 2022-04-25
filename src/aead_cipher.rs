@@ -19,7 +19,7 @@ use crate::{Key256, KeyAccessor};
 
 /// Authenticated encryption & decryption
 ///
-/// AeadCipher implements authenticated encryption (and decryption), using the
+/// `AeadCipher` implements authenticated encryption (and decryption), using the
 /// Chacha20 stream cipher and Poly1305 universal hash function. To avoid having
 /// to keep a state, the nonce is randomly generated. Unfortunately, Chacha20
 /// has small nonces (96 bits), which means that replay attacks might happen
@@ -70,6 +70,7 @@ impl AeadCipher {
         AeadCipher::NONCE_SIZE + AeadCipher::TAG_LENGTH;
 
     /// Construct a cipher from a 256 bits key
+    #[must_use]
     pub fn from_key(key: Key256) -> AeadCipher {
         AeadCipher {
             key_derivation_prf: KeyDerivationPrf::<Key256>::from_key(key),
@@ -106,20 +107,19 @@ impl AeadCipher {
             .copy_from_slice(plaintext);
 
         let encryption_key = self.key_derivation_prf.derive_key(&iv);
-        let cipher =
-            ChaCha20Poly1305::new_from_slice(encryption_key.content()).unwrap();
+        let chacha_key =
+            chacha20poly1305::Key::from_slice(encryption_key.content());
+        let cipher = ChaCha20Poly1305::new(chacha_key);
 
         let inner_nonce =
             Nonce::from_slice(&iv[..AeadCipher::CHACHA20_NONCE_LENGTH]);
 
-        let tag = cipher
-            .encrypt_in_place_detached(
-                inner_nonce,
-                b"",
-                &mut ciphertext[AeadCipher::NONCE_SIZE
-                    ..(AeadCipher::NONCE_SIZE + plaintext.len())],
-            )
-            .map_err(|_| EncryptionError::InnerError())?;
+        let tag = cipher.encrypt_in_place_detached(
+            inner_nonce,
+            b"",
+            &mut ciphertext[AeadCipher::NONCE_SIZE
+                ..(AeadCipher::NONCE_SIZE + plaintext.len())],
+        )?;
 
         ciphertext[(AeadCipher::NONCE_SIZE + plaintext.len())
             ..(AeadCipher::NONCE_SIZE
@@ -161,20 +161,19 @@ impl AeadCipher {
         );
 
         let encryption_key = self.key_derivation_prf.derive_key(iv);
-        let cipher =
-            ChaCha20Poly1305::new_from_slice(encryption_key.content()).unwrap();
+        let chacha_key =
+            chacha20poly1305::Key::from_slice(encryption_key.content());
+        let cipher = ChaCha20Poly1305::new(chacha_key);
 
         let inner_nonce =
             Nonce::from_slice(&iv[..AeadCipher::CHACHA20_NONCE_LENGTH]);
 
-        cipher
-            .decrypt_in_place_detached(
-                inner_nonce,
-                b"",
-                &mut plaintext[..real_plaintext_length],
-                tag,
-            )
-            .map_err(|_| DecryptionError::InnerError())?;
+        cipher.decrypt_in_place_detached(
+            inner_nonce,
+            b"",
+            &mut plaintext[..real_plaintext_length],
+            tag,
+        )?;
 
         Ok(())
     }
@@ -228,6 +227,7 @@ impl DeserializableCleartextContent for AeadCipher {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
     use crate::Key;
 
     use super::*;

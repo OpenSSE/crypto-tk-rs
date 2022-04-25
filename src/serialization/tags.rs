@@ -9,7 +9,6 @@ use {strum::IntoEnumIterator, strum_macros::EnumIter};
 /// Tag encoding the type of a serialized cryptographic object
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(test, derive(EnumIter))]
-
 pub enum SerializationTag {
     Prf = 1,
     Prg,
@@ -60,10 +59,10 @@ impl SerializationTag {
 
     /// Write the tag to an IO stream
     pub(crate) fn serialize_content(
-        &self,
+        self,
         writer: &mut dyn std::io::Write,
     ) -> std::io::Result<usize> {
-        let value = *self as u16;
+        let value = self as u16;
         writer.write_all(&value.to_le_bytes())?;
 
         Ok(SerializationTag::SERIALIZATION_SIZE)
@@ -152,6 +151,8 @@ impl<T: SerializationTaggedType> SerializationTagged for T {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
+
     use super::*;
 
     #[test]

@@ -1,7 +1,7 @@
 use crate::rcprf::*;
 use std::collections::VecDeque;
 
-/// The output generator (as an iterator) for RcPrf
+/// The output generator (as an iterator) for [`RcPrf`]
 pub struct RcPrfIterator {
     pub(crate) node_queue: VecDeque<Pin<Box<dyn private::RcPrfElement>>>,
     pub(crate) output_size: usize,
@@ -16,18 +16,21 @@ impl Iterator for RcPrfIterator {
                 if elt.is_leaf() {
                     let mut result = vec![0u8; self.output_size];
                     let x = elt.range().min();
-                    elt.eval(x, &mut result).unwrap();
+                    // we can use `unchecked_eval` here because we know the
+                    // function will not panic as `x` is the minimum value of
+                    // the element's range (and hence in the range)
+                    elt.unchecked_eval(x, &mut result);
                     return Some((x, result));
-                } else {
-                    // split the node in two
-                    let (left, right) = elt.split_node();
-
-                    // reinsert the node in the queue
-                    self.node_queue.push_front(right);
-
-                    // and loop
-                    elt = left;
                 }
+                // else
+                // split the node in two
+                let (left, right) = elt.split_node();
+
+                // reinsert the node in the queue
+                self.node_queue.push_front(right);
+
+                // and loop
+                elt = left;
             }
         } else {
             None
@@ -35,13 +38,15 @@ impl Iterator for RcPrfIterator {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        if self.node_queue.is_empty() {
-            (0, Some(0))
-        } else {
-            let s = (self.node_queue.back().unwrap().range().max()
-                - self.node_queue.front().unwrap().range().min()
-                + 1) as usize;
-            (s, Some(s))
+        let back = self.node_queue.back();
+        let front = self.node_queue.front();
+
+        match (back, front) {
+            (Some(back), Some(front)) => {
+                let s = (back.range().max() - front.range().min() + 1) as usize;
+                (s, Some(s))
+            }
+            _ => (0, Some(0)),
         }
     }
 }
@@ -54,17 +59,20 @@ impl DoubleEndedIterator for RcPrfIterator {
                     let mut result = vec![0u8; self.output_size];
 
                     let x = elt.range().max();
-                    elt.eval(x, &mut result).unwrap();
+                    // we can use `unchecked_eval` here because we know the
+                    // function will not panic as `x` is the maximum value of
+                    // the element's range (and hence in the range)
+                    elt.unchecked_eval(x, &mut result);
                     return Some((x, result));
-                } else {
-                    // split the node in two
-                    let (left, right) = elt.split_node();
-
-                    // reinsert the node in the queue
-                    self.node_queue.push_back(left);
-                    // and loop
-                    elt = right;
                 }
+                // else
+                // split the node in two
+                let (left, right) = elt.split_node();
+
+                // reinsert the node in the queue
+                self.node_queue.push_back(left);
+                // and loop
+                elt = right;
             }
         } else {
             None
@@ -104,7 +112,7 @@ impl<KeyType: Key> DoubleEndedIterator for KeyDerivationRcPrfIterator<KeyType> {
 
 impl<KeyType: Key> ExactSizeIterator for KeyDerivationRcPrfIterator<KeyType> {}
 
-/// Parallel iterator for RcPrfs
+/// Parallel iterator for [`RcPrf`]s
 #[cfg(feature = "rayon")]
 pub struct RcPrfParallelIterator {
     base: RcPrfIterator,
@@ -112,13 +120,14 @@ pub struct RcPrfParallelIterator {
 
 #[cfg(feature = "rayon")]
 impl RcPrfParallelIterator {
-    /// Create a new parallel iterator for RcPrfs from a regular one
+    /// Create a new parallel iterator for [`RcPrf`]s from a regular one
+    #[must_use]
     pub fn new(base: RcPrfIterator) -> Self {
         RcPrfParallelIterator { base }
     }
 }
 
-/// Parallel iterator for RcPrfs meant for key derivations
+/// Parallel iterator for [`RcPrf`]s meant for key derivations
 #[cfg(feature = "rayon")]
 pub struct KeyDerivationRcPrfParallelIterator<KeyType: Key> {
     pub(crate) inner: RcPrfParallelIterator,
@@ -127,7 +136,8 @@ pub struct KeyDerivationRcPrfParallelIterator<KeyType: Key> {
 
 #[cfg(feature = "rayon")]
 impl<KeyType: Key> KeyDerivationRcPrfParallelIterator<KeyType> {
-    /// Create a new parallel iterator for RcPrfs from a regular one
+    /// Create a new parallel iterator for [`RcPrf`]s from a regular one
+    #[must_use]
     pub fn new(inner: RcPrfParallelIterator) -> Self {
         KeyDerivationRcPrfParallelIterator::<KeyType> {
             inner,
@@ -136,7 +146,7 @@ impl<KeyType: Key> KeyDerivationRcPrfParallelIterator<KeyType> {
     }
 }
 
-/// Parallel iteration for RcPrfs
+/// Parallel iteration for [`RcPrf`]s
 pub mod parallel_iterator {
     use super::*;
     use rayon::iter::plumbing::*;
@@ -184,9 +194,14 @@ pub mod parallel_iterator {
         }
 
         fn split_at(self, index: usize) -> (Self, Self) {
+            // The node queue should be empty if and only if every element of
+            // the iterator has been returned. In that case, 'split_at' should
+            // never be called, and the following 'unwrap()' call should never
+            // panic.
+            #[allow(clippy::unwrap_used)]
+            let front = self.node_queue.front().unwrap();
             // index must be in the right element of the pair
-            let capacity =
-                self.node_queue.front().unwrap().tree_height() as usize;
+            let capacity = front.tree_height() as usize;
             let mut left_deque =
                 VecDeque::<Pin<Box<dyn private::RcPrfElement>>>::with_capacity(
                     capacity,
@@ -196,7 +211,7 @@ pub mod parallel_iterator {
                     capacity,
                 );
 
-            let start_index = self.node_queue.front().unwrap().range().min();
+            let start_index = front.range().min();
             let leaf = start_index + index as u64; // do not forget the offset
 
             self.node_queue.into_iter().for_each(|elt| {
@@ -210,12 +225,15 @@ pub mod parallel_iterator {
                     // twice (the nodes of the path from the root to leaf)
                     // Yet, this is elegant and the asymptotic complexity is
                     // not affected.
-                    let left_subtree = elt
-                        .constrain(&RcPrfRange::from(elt.range().min()..leaf))
-                        .unwrap();
-                    let right_subtree = elt
-                        .constrain(&RcPrfRange::from(leaf..=elt.range().max()))
-                        .unwrap();
+                    // Also, we can call 'unchecked_constrain' instead of
+                    // 'constrain' as, by construction, the middle of the range,
+                    // 'leaf', is in the range.
+                    let left_subtree = elt.unchecked_constrain(
+                        &RcPrfRange::from(elt.range().min()..leaf),
+                    );
+                    let right_subtree = elt.unchecked_constrain(
+                        &RcPrfRange::from(leaf..=elt.range().max()),
+                    );
 
                     left_subtree
                         .elements

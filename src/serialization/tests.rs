@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used)]
+
 use super::cleartext_serialization::*;
 use crate::*;
 use std::io::Cursor;
@@ -17,7 +19,7 @@ fn wrap_unwrap<T: Wrappable>(object: &T) -> T {
     let k = Key256::new();
     let wrapper = CryptoWrapper::from_key(k);
 
-    let bytes = wrapper.wrap(object);
+    let bytes = wrapper.wrap(object).unwrap();
     wrapper.unwrap(&bytes).unwrap()
 }
 
@@ -182,6 +184,8 @@ where
     let deser_cipher = fun(&cipher);
 
     let plaintext = TEST_PLAINTEXT;
+    // If the given length overflows, the call to 'encrypt' will return an
+    // error
     let mut ciphertext =
         vec![0u8; plaintext.len() + Cipher::CIPHERTEXT_EXPANSION];
     let mut dec_result = vec![0u8; plaintext.len()];
@@ -213,6 +217,8 @@ where
     let deser_cipher = fun(&cipher);
 
     let plaintext = TEST_PLAINTEXT;
+    // If the given length overflows, the call to 'encrypt' will return an
+    // error
     let mut ciphertext =
         vec![0u8; plaintext.len() + AeadCipher::CIPHERTEXT_EXPANSION];
     let mut dec_result = vec![0u8; plaintext.len()];

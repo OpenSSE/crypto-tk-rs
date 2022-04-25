@@ -45,7 +45,7 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfLeafElement {
     ) {
         debug_assert_eq!(range.min(), self.index);
         debug_assert_eq!(range.max(), self.index);
-        self.unchecked_eval(range.min(), outputs[0])
+        self.unchecked_eval(range.min(), outputs[0]);
     }
 
     #[cfg(feature = "rayon")]
@@ -55,7 +55,7 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfLeafElement {
         outputs: &mut [&mut [u8]],
     ) {
         // there is no point in parallelizing here
-        self.unchecked_eval_range(range, outputs)
+        self.unchecked_eval_range(range, outputs);
     }
 
     fn unchecked_constrain(&self, range: &RcPrfRange) -> ConstrainedRcPrf {
@@ -88,9 +88,10 @@ impl RangePrf for ConstrainedRcPrfLeafElement {
 
 impl SerializableCleartextContent for ConstrainedRcPrfLeafElement {
     fn serialization_content_byte_size(&self) -> usize {
-        self.prf.serialization_content_byte_size()
-            + std::mem::size_of_val(&self.index)
-            + std::mem::size_of_val(&self.rcprf_height)
+        self.prf
+            .serialization_content_byte_size()
+            .saturating_add(std::mem::size_of_val(&self.index))
+            .saturating_add(std::mem::size_of_val(&self.rcprf_height))
     }
     fn serialize_content(
         &self,

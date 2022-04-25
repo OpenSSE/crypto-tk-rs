@@ -70,6 +70,7 @@ impl Cipher {
     pub const CIPHERTEXT_EXPANSION: usize = Cipher::NONCE_SIZE;
 
     /// Construct a cipher from a 256 bits key
+    #[must_use]
     pub fn from_key(key: Key256) -> Cipher {
         Cipher {
             key_derivation_prf: KeyDerivationPrf::<Key256>::from_key(key),
@@ -85,7 +86,11 @@ impl Cipher {
         plaintext: &[u8],
         ciphertext: &mut [u8],
     ) -> Result<(), EncryptionError> {
-        if ciphertext.len() < plaintext.len() + Cipher::CIPHERTEXT_EXPANSION {
+        if ciphertext
+            .len()
+            .saturating_sub(Cipher::CIPHERTEXT_EXPANSION)
+            < plaintext.len()
+        {
             return Err(EncryptionError::CiphertextLengthError {
                 plaintext_length: plaintext.len(),
                 ciphertext_length: ciphertext.len(),
@@ -104,11 +109,10 @@ impl Cipher {
             .copy_from_slice(plaintext);
 
         let encryption_key = self.key_derivation_prf.derive_key(&iv);
+        let chacha_key = chacha20::Key::from_slice(encryption_key.content());
         let inner_nonce =
             Nonce::from_slice(&iv[..Cipher::CHACHA20_NONCE_LENGTH]);
-        let mut cipher =
-            ChaCha20::new_from_slices(encryption_key.content(), inner_nonce)
-                .unwrap();
+        let mut cipher = ChaCha20::new(chacha_key, inner_nonce);
 
         cipher.apply_keystream(
             &mut ciphertext
@@ -140,6 +144,7 @@ impl Cipher {
             });
         }
 
+        // The first test prevents an underflow
         let real_plaintext_length = l - Cipher::CIPHERTEXT_EXPANSION;
         let iv = &ciphertext[0..Cipher::NONCE_SIZE];
 
@@ -148,11 +153,10 @@ impl Cipher {
             .copy_from_slice(&ciphertext[Cipher::NONCE_SIZE..]);
 
         let encryption_key = self.key_derivation_prf.derive_key(iv);
+        let chacha_key = chacha20::Key::from_slice(encryption_key.content());
         let inner_nonce =
             Nonce::from_slice(&iv[..Cipher::CHACHA20_NONCE_LENGTH]);
-        let mut cipher =
-            ChaCha20::new_from_slices(encryption_key.content(), inner_nonce)
-                .unwrap();
+        let mut cipher = ChaCha20::new(chacha_key, inner_nonce);
 
         cipher.apply_keystream(&mut plaintext[..real_plaintext_length]);
 
@@ -187,6 +191,7 @@ impl DeserializableCleartextContent for Cipher {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
     use crate::Key;
 
     use super::*;
