@@ -369,8 +369,8 @@ impl private::UncheckedRangePrf for ConstrainedRcPrfInnerElement {
                     self.range(),
                     range
                 ),
-                (None, Some(constrained_rcprf)) => constrained_rcprf,
-                (Some(constrained_rcprf), None) => constrained_rcprf,
+                (None, Some(constrained_rcprf))
+                | (Some(constrained_rcprf), None) => constrained_rcprf,
                 (
                     Some(mut constrained_rcprf_left),
                     Some(constrained_rcprf_right),

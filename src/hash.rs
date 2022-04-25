@@ -13,6 +13,7 @@ impl Hash {
     pub const HASH_SIZE: usize = 64;
 
     /// Creates a new hash value from the input data
+    #[must_use]
     pub fn new(data: &[u8]) -> Hash {
         Hash {
             inner: blake2b_simd::blake2b(data),

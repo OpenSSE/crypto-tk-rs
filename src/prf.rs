@@ -45,14 +45,17 @@ impl InsecureClone for Prf {
 
 impl Prf {
     /// Construct a PRF from a 256 bits key
+    #[must_use]
     pub fn from_key(key: Key256) -> Prf {
         Prf { key }
     }
 
     /// Construct a PRF from a new random key
-    #[allow(clippy::new_without_default)] // This is done on purpose to avoid
-                                          // involuntary creation of a PRF with
-                                          // a random key
+    #[allow(clippy::new_without_default)]
+    // This is done on purpose to avoid
+    // involuntary creation of a PRF with
+    // a random key
+    #[must_use]
     pub fn new() -> Prf {
         let key = Key256::new();
         Prf { key }
@@ -129,6 +132,7 @@ impl<KeyType: Key> InsecureClone for KeyDerivationPrf<KeyType> {
 
 impl<KeyType: Key> KeyDerivationPrf<KeyType> {
     /// Construct a PRF for key derivation from a 256 bits key
+    #[must_use]
     pub fn from_key(key: Key256) -> KeyDerivationPrf<KeyType> {
         Self {
             prf: Prf::from_key(key),
@@ -137,9 +141,11 @@ impl<KeyType: Key> KeyDerivationPrf<KeyType> {
     }
 
     /// Construct a PRF for key derivation from a new random key
-    #[allow(clippy::new_without_default)] // This is done on purpose to avoid
-                                          // involuntary creation of a PRF with
-                                          // a random key
+    #[allow(clippy::new_without_default)]
+    // This is done on purpose to avoid
+    // involuntary creation of a PRF with
+    // a random key
+    #[must_use]
     pub fn new() -> KeyDerivationPrf<KeyType> {
         Self {
             prf: Prf::new(),
@@ -148,6 +154,7 @@ impl<KeyType: Key> KeyDerivationPrf<KeyType> {
     }
 
     /// Derive a new pseudo-random key from the given input
+    #[must_use]
     pub fn derive_key(&self, input: &[u8]) -> KeyType {
         let mut buf = vec![0u8; KeyType::KEY_SIZE];
         self.prf.fill_bytes(input, &mut buf);

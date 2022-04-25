@@ -38,14 +38,17 @@ impl Prg {
     const PRG_NONCE: [u8; 12] = [0u8; 12];
 
     /// Construct a PRG from a 256 bits key
+    #[must_use]
     pub fn from_key(key: Key256) -> Prg {
         Prg { key }
     }
 
     /// Construct a PRG from a new random key
-    #[allow(clippy::new_without_default)] // This is done on purpose to avoid
-                                          // involuntary creation of a PRG with
-                                          // a random key
+    #[allow(clippy::new_without_default)]
+    // This is done on purpose to avoid
+    // involuntary creation of a PRG with
+    // a random key
+    #[must_use]
     pub fn new() -> Prg {
         let key = Key256::new();
         Prg { key }
@@ -140,6 +143,7 @@ impl<KeyType: Key> InsecureClone for KeyDerivationPrg<KeyType> {
 
 impl<KeyType: Key> KeyDerivationPrg<KeyType> {
     /// Construct a PRG intended for key derivation from a 256 bits key
+    #[must_use]
     pub fn from_key(key: Key256) -> Self {
         Self {
             prg: Prg::from_key(key),
@@ -148,9 +152,11 @@ impl<KeyType: Key> KeyDerivationPrg<KeyType> {
     }
 
     /// Construct a PRG intended for key derivation from a new random key
-    #[allow(clippy::new_without_default)] // This is done on purpose to avoid
-                                          // involuntary creation of a PRG with
-                                          // a random key
+    #[allow(clippy::new_without_default)]
+    // This is done on purpose to avoid
+    // involuntary creation of a PRG with
+    // a random key
+    #[must_use]
     pub fn new() -> Self {
         Self {
             prg: Prg::new(),
@@ -160,6 +166,7 @@ impl<KeyType: Key> KeyDerivationPrg<KeyType> {
 
     /// Derive a new key using the PRG. Modifying `key_index` parameter
     /// generates keys that are computationally pair-wise independent
+    #[must_use]
     pub fn derive_key(&self, key_index: u32) -> KeyType {
         let offset = (key_index as usize) * KeyType::KEY_SIZE;
         // cannot use an array in the following line :(
@@ -171,9 +178,10 @@ impl<KeyType: Key> KeyDerivationPrg<KeyType> {
         KeyType::from_slice(&mut buf[..])
     }
 
-    /// Derive a sequence of new keys using the PRG such that their key_index
+    /// Derive a sequence of new keys using the PRG such that their `key_index`
     /// is in the `indexes` range. The keys in the output are sorted by
     /// increasing index.
+    #[must_use]
     pub fn derive_keys(&self, indexes: Range<u32>) -> Vec<KeyType> {
         let index_width = indexes.len();
 
@@ -195,7 +203,8 @@ impl<KeyType: Key> KeyDerivationPrg<KeyType> {
     }
 
     /// Derive a pair of new keys using the PRG. The returned pair of keys
-    /// `(k1,k2) have index `key_index` and `key_index+1` respectively.
+    /// `(k1,k2)` have index `key_index` and `key_index+1` respectively.
+    #[must_use]
     pub fn derive_key_pair(&self, key_index: u32) -> (KeyType, KeyType) {
         let mut buf = vec![0u8; 2 * KeyType::KEY_SIZE];
 

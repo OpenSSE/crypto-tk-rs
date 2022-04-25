@@ -53,11 +53,11 @@ pub trait RangePrf: private::UncheckedRangePrf {
     /// Evaluate the PRF on the input `x` and put the result in `output`.
     /// Returns an error when the input is out of the PRF range.
     fn eval(&self, x: u64, output: &mut [u8]) -> Result<(), RcPrfError> {
-        if !self.range().contains_leaf(x) {
-            Err(RcPrfError::InvalidEvalPointError(x, self.range()))
-        } else {
+        if self.range().contains_leaf(x) {
             self.unchecked_eval(x, output);
             Ok(())
+        } else {
+            Err(RcPrfError::InvalidEvalPointError(x, self.range()))
         }
     }
 
@@ -112,13 +112,13 @@ pub trait RangePrf: private::UncheckedRangePrf {
         &self,
         range: &RcPrfRange,
     ) -> Result<ConstrainedRcPrf, RcPrfError> {
-        if !self.range().contains_range(range) {
+        if self.range().contains_range(range) {
+            Ok(self.unchecked_constrain(range))
+        } else {
             Err(RcPrfError::InvalidConstrainRangeError(
                 range.clone(),
                 self.range(),
             ))
-        } else {
-            Ok(self.unchecked_constrain(range))
         }
     }
 }

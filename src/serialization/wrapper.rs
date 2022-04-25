@@ -3,10 +3,7 @@
 use crate::errors::UnwrappingError;
 use crate::serialization::cleartext_serialization::*;
 use crate::{AeadCipher, Key256};
-use std::{
-    io::Cursor,
-    ops::{Deref, DerefMut},
-};
+use std::{io::Cursor, ops::DerefMut};
 
 use zeroize::*;
 
@@ -22,6 +19,7 @@ impl<T> Wrappable for T where T: SerializableCleartext + DeserializableCleartext
 
 impl CryptoWrapper {
     /// Initialize a new wrapper
+    #[must_use]
     pub fn from_key(key: Key256) -> Self {
         CryptoWrapper {
             cipher: AeadCipher::from_key(key),
@@ -57,7 +55,7 @@ impl CryptoWrapper {
     ) -> Result<T, UnwrappingError> {
         let buf = Zeroizing::new(self.cipher.decrypt_to_vec(bytes)?);
 
-        let mut cursor = Cursor::new(buf.deref());
+        let mut cursor = Cursor::new(&*buf);
 
         Ok(T::deserialize_cleartext(&mut cursor)?)
     }

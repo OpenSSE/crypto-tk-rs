@@ -1,4 +1,4 @@
-//! RcPrf meant for key derivation
+//! A range-constrained PRF meant for key derivation
 
 use super::*;
 
@@ -88,7 +88,7 @@ pub trait KeyDerivationRangePrf: key_derivation_private::InnerRangePrf {
 
 impl<T: key_derivation_private::InnerRangePrf> KeyDerivationRangePrf for T {}
 
-/// An RcPrf generating keys instead of bytes slices
+/// A range-constrained PRF generating keys instead of bytes slices
 pub struct KeyDerivationRcPrf<KeyType: Key> {
     inner: RcPrf,
     _marker: std::marker::PhantomData<KeyType>,
@@ -111,14 +111,14 @@ impl<KeyType: Key> key_derivation_private::InnerRangePrf
 }
 
 impl<KeyType: Key> KeyDerivationRcPrf<KeyType> {
-    /// Returns a new RcPrf based on a tree of height `height`, with a random
-    /// root.
+    /// Returns a new `KeyDerivationRcPrf` based on a tree of height `height`,
+    /// with a random root.
     pub fn new(height: u8) -> Result<Self, RcPrfError> {
         Self::from_key(Key256::new(), height)
     }
 
-    /// Returns a new RcPrf based on a tree of height `height`, with the given
-    /// root key.
+    /// Returns a new `KeyDerivationRcPrf` based on a tree of height `height`,
+    /// with the given root key.
     pub fn from_key(root: Key256, height: u8) -> Result<Self, RcPrfError> {
         Ok(KeyDerivationRcPrf::<KeyType> {
             inner: RcPrf::from_key(root, height)?,
@@ -127,7 +127,7 @@ impl<KeyType: Key> KeyDerivationRcPrf<KeyType> {
     }
 
     /// Returns an iterator of (`index`,`key`) pairs such that `key` is the
-    /// key derived from `index` by the RcPrf on `index`.
+    /// key derived from `index` by the `KeyDerivationRcPrf` on `index`.
     pub fn key_range_iter(
         &self,
         range: &RcPrfRange,
@@ -137,8 +137,8 @@ impl<KeyType: Key> KeyDerivationRcPrf<KeyType> {
     }
 
     /// Returns a parallel iterator of (`index`,`key`) pairs such that
-    /// `key` is the key derived from `index` by the RcPrf on `index`. This
-    /// iterator is to be used with the `rayon` crate.
+    /// `key` is the key derived from `index` by the `KeyDerivationRcPrf` on
+    /// `index`. This iterator is to be used with the `rayon` crate.
     #[cfg(feature = "rayon")]
     pub fn key_range_par_iter(
         &self,
@@ -150,7 +150,7 @@ impl<KeyType: Key> KeyDerivationRcPrf<KeyType> {
     }
 }
 
-/// A Constrained RcPrf generating keys instead of bytes slices
+/// A Constrained `KeyDerivationRcPrf` generating keys instead of bytes slices
 pub struct KeyDerivationConstrainedRcPrf<KeyType: Key> {
     inner: ConstrainedRcPrf,
     _marker: std::marker::PhantomData<KeyType>,
@@ -176,8 +176,9 @@ impl<KeyType: Key> KeyDerivationConstrainedRcPrf<KeyType> {
     fn into_inner(self) -> ConstrainedRcPrf {
         self.inner
     }
-    /// Transform the constrained RcPrf into an iterator that produces pairs of
-    /// index and keys derived from that index.
+    /// Transform the constrained `KeyDerivationRcPrf` into an iterator that
+    /// produces pairs of index and keys derived from that index.
+    #[must_use]
     pub fn into_key_iter(
         self,
     ) -> iterator::KeyDerivationRcPrfIterator<KeyType> {
@@ -189,10 +190,11 @@ impl<KeyType: Key> KeyDerivationConstrainedRcPrf<KeyType> {
         }
     }
 
-    /// Transform the constrained RcPrf into a parallel iterator that can be
-    /// used with the `rayon` crate, and which produces pairs of index and
-    /// keys derived from that index.
+    /// Transform the constrained `KeyDerivationRcPrf` into a parallel iterator
+    /// that can be used with the `rayon` crate, and which produces pairs of
+    /// index and keys derived from that index.
     #[cfg(feature = "rayon")]
+    #[must_use]
     pub fn into_key_par_iter(
         self,
     ) -> iterator::KeyDerivationRcPrfParallelIterator<KeyType> {
