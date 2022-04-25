@@ -17,8 +17,8 @@ default = ["rayon"]
 
 [dev-dependencies]
 criterion = "^0.3"
-strum = "^0.23"
-strum_macros = "^0.23"
+strum = "^0.24"
+strum_macros = "^0.24"
 hex = "0.4.3"
 
 [[bench]]
@@ -27,7 +27,7 @@ harness = false
 
 [dependencies]
 zeroize = { version = "<1.5", features = ["zeroize_derive"] }
-zeroize_derive = "<1.3"
+zeroize_derive = "1.3"
 rand = "^0.8.4"
 blake2b_simd = "^1.0.0"
 aead = { version = "0.4.2", features = ["std"] }
