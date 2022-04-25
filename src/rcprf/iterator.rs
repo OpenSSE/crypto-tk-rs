@@ -38,13 +38,15 @@ impl Iterator for RcPrfIterator {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        if self.node_queue.is_empty() {
-            (0, Some(0))
-        } else {
-            let s = (self.node_queue.back().unwrap().range().max()
-                - self.node_queue.front().unwrap().range().min()
-                + 1) as usize;
-            (s, Some(s))
+        let back = self.node_queue.back();
+        let front = self.node_queue.front();
+
+        match (back, front) {
+            (Some(back), Some(front)) => {
+                let s = (back.range().max() - front.range().min() + 1) as usize;
+                (s, Some(s))
+            }
+            _ => (0, Some(0)),
         }
     }
 }
@@ -192,9 +194,14 @@ pub mod parallel_iterator {
         }
 
         fn split_at(self, index: usize) -> (Self, Self) {
+            // The node queue should be empty if and only if every element of
+            // the iterator has been returned. In that case, 'split_at' should
+            // never be called, and the following 'unwrap()' call should never
+            // panic.
+            #[allow(clippy::unwrap_used)]
+            let front = self.node_queue.front().unwrap();
             // index must be in the right element of the pair
-            let capacity =
-                self.node_queue.front().unwrap().tree_height() as usize;
+            let capacity = front.tree_height() as usize;
             let mut left_deque =
                 VecDeque::<Pin<Box<dyn private::RcPrfElement>>>::with_capacity(
                     capacity,
@@ -204,7 +211,7 @@ pub mod parallel_iterator {
                     capacity,
                 );
 
-            let start_index = self.node_queue.front().unwrap().range().min();
+            let start_index = front.range().min();
             let leaf = start_index + index as u64; // do not forget the offset
 
             self.node_queue.into_iter().for_each(|elt| {
@@ -218,12 +225,15 @@ pub mod parallel_iterator {
                     // twice (the nodes of the path from the root to leaf)
                     // Yet, this is elegant and the asymptotic complexity is
                     // not affected.
-                    let left_subtree = elt
-                        .constrain(&RcPrfRange::from(elt.range().min()..leaf))
-                        .unwrap();
-                    let right_subtree = elt
-                        .constrain(&RcPrfRange::from(leaf..=elt.range().max()))
-                        .unwrap();
+                    // Also, we can call 'unchecked_constrain' instead of
+                    // 'constrain' as, by construction, the middle of the range,
+                    // 'leaf', is in the range.
+                    let left_subtree = elt.unchecked_constrain(
+                        &RcPrfRange::from(elt.range().min()..leaf),
+                    );
+                    let right_subtree = elt.unchecked_constrain(
+                        &RcPrfRange::from(leaf..=elt.range().max()),
+                    );
 
                     left_subtree
                         .elements

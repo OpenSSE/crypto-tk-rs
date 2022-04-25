@@ -59,10 +59,10 @@ impl Prg {
         // while we wait for the Chacha implementation to implement zeroize,
         // use the stack-clearing interface from clear_on_drop
         clear_stack_on_return(1, || {
-            let mut cipher =
-                ChaCha20::new_from_slices(self.key.content(), &Self::PRG_NONCE)
-                    .unwrap();
-
+            let mut cipher = ChaCha20::new(
+                chacha20::Key::from_slice(self.key.content()),
+                chacha20::Nonce::from_slice(&Self::PRG_NONCE),
+            );
             // set the bytes of the buffer to 0
             output.zeroize();
             cipher.apply_keystream(output);
@@ -93,9 +93,10 @@ impl Prg {
         // while we wait for the Chacha implementation to implement zeroize,
         // use the stack-clearing interface from clear_on_drop
         clear_stack_on_return(1, || {
-            let mut cipher =
-                ChaCha20::new_from_slices(self.key.content(), &Self::PRG_NONCE)
-                    .unwrap();
+            let mut cipher = ChaCha20::new(
+                chacha20::Key::from_slice(self.key.content()),
+                chacha20::Nonce::from_slice(&Self::PRG_NONCE),
+            );
 
             cipher.seek(offset);
             // set the bytes of the buffer to 0

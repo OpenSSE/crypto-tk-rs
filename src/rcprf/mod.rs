@@ -203,6 +203,10 @@ impl RcPrf {
 
 impl private::UncheckedRangePrf for ConstrainedRcPrf {
     fn unchecked_eval(&self, x: u64, output: &mut [u8]) {
+        // We are in an 'unchecked' function so it is OK to panic.
+        // Also, if the invariants are respected, we are supposed to find
+        // exactly one element containing the leaf `x`
+        #[allow(clippy::unwrap_used)]
         self.elements
             .iter()
             .find(|elt| elt.range().contains_leaf(x))
@@ -221,7 +225,7 @@ impl private::UncheckedRangePrf for ConstrainedRcPrf {
                 let r_width = r.width() as usize;
                 let (left_slice, right_slice) = current.split_at_mut(r_width);
                 current = right_slice;
-                elt.eval_range(&r, left_slice).unwrap();
+                elt.unchecked_eval_range(&r, left_slice);
             }
         }
     }
@@ -241,7 +245,7 @@ impl private::UncheckedRangePrf for ConstrainedRcPrf {
                         current.split_at_mut(r_width);
                     current = right_slice;
                     s.spawn(move |_| {
-                        elt.par_eval_range(&r, left_slice).unwrap();
+                        elt.unchecked_par_eval_range(&r, left_slice);
                     });
                 }
             }
@@ -255,6 +259,11 @@ impl private::UncheckedRangePrf for ConstrainedRcPrf {
 
         for elt in &self.elements {
             if let Some(r) = elt.range().intersection(range) {
+                // We are in an 'unchecked' function so it is OK to panic.
+                // Also, if the invariants are respected, consecutive elements
+                // in the `elements` vector have consecutive ranges, and the
+                // `merge` function should not return an error
+                #[allow(clippy::unwrap_used)]
                 constrained_rcprf
                     .merge(elt.unchecked_constrain(&r))
                     .unwrap();
@@ -441,6 +450,7 @@ impl DeserializableCleartextContent for ConstrainedRcPrf {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
     use super::*;
     use rayon::iter::ParallelIterator;
 

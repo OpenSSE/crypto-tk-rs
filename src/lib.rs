@@ -29,7 +29,7 @@
 #![warn(clippy::cognitive_complexity)]
 #![warn(clippy::try_err)]
 #![warn(clippy::unimplemented)]
-// #![warn(clippy::unwrap_used)]
+#![warn(clippy::unwrap_used)]
 #![warn(clippy::use_debug)]
 #![warn(clippy::map_err_ignore)]
 

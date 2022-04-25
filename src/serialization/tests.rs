@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used)]
+
 use super::cleartext_serialization::*;
 use crate::*;
 use std::io::Cursor;
@@ -17,7 +19,7 @@ fn wrap_unwrap<T: Wrappable>(object: &T) -> T {
     let k = Key256::new();
     let wrapper = CryptoWrapper::from_key(k);
 
-    let bytes = wrapper.wrap(object);
+    let bytes = wrapper.wrap(object).unwrap();
     wrapper.unwrap(&bytes).unwrap()
 }
 

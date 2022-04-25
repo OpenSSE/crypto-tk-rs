@@ -37,7 +37,18 @@ pub enum DecryptionError {
     InnerError(#[from] aead::Error),
 }
 
-/// Error during unwrapping a cryptographic object
+/// Error while wrapping a cryptographic object
+#[derive(Error, Debug)]
+pub enum WrappingError {
+    /// Ecnryption error
+    #[error("WrappingError - error during encryption: {0}")]
+    DecryptionError(#[from] EncryptionError),
+    /// Deserialization error
+    #[error("WrappingError - IO error during serialization: {0}")]
+    SerializationError(#[from] std::io::Error),
+}
+
+/// Error while unwrapping a cryptographic object
 #[derive(Error, Debug)]
 pub enum UnwrappingError {
     /// Decryption error

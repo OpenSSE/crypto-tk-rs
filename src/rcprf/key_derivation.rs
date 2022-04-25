@@ -207,6 +207,7 @@ impl<KeyType: Key> KeyDerivationConstrainedRcPrf<KeyType> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
     use super::*;
     use crate::KeyAccessor;
     use rayon::iter::ParallelIterator;

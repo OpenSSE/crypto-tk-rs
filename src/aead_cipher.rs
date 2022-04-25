@@ -227,6 +227,7 @@ impl DeserializableCleartextContent for AeadCipher {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
     use crate::Key;
 
     use super::*;

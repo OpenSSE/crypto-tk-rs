@@ -2,7 +2,7 @@
 
 use crate::errors::UnwrappingError;
 use crate::serialization::cleartext_serialization::*;
-use crate::{AeadCipher, Key256};
+use crate::{AeadCipher, Key256, WrappingError};
 use std::{io::Cursor, ops::DerefMut};
 
 use zeroize::*;
@@ -28,7 +28,10 @@ impl CryptoWrapper {
 
     /// Wrap an object to a ciphertext: serialize the object and encrypt the
     /// resulting bytes
-    pub fn wrap<T: Wrappable>(&self, object: &T) -> Vec<u8> {
+    pub fn wrap<T: Wrappable>(
+        &self,
+        object: &T,
+    ) -> Result<Vec<u8>, WrappingError> {
         // try to avoid reallocations by constructing a vector with the right
         // length from the beginning
         let plain_length = object.cleartext_serialization_length();
@@ -36,16 +39,14 @@ impl CryptoWrapper {
         let mut buf = Zeroizing::new(vec![0u8; plain_length]);
 
         // serialize the object to plaintext
-        object
-            .serialize_cleartext(&mut buf.deref_mut().as_mut_slice())
-            .unwrap();
+        object.serialize_cleartext(&mut buf.deref_mut().as_mut_slice())?;
 
         // encrypt it
         let mut ct = vec![0u8; plain_length + AeadCipher::CIPHERTEXT_EXPANSION];
 
-        self.cipher.encrypt(&buf, &mut ct).unwrap();
+        self.cipher.encrypt(&buf, &mut ct)?;
 
-        ct
+        Ok(ct)
     }
 
     /// Unwrap an object from a sequence of bytes
