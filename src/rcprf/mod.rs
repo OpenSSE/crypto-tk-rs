@@ -571,7 +571,7 @@ mod tests {
 
     #[test]
     fn rcprf_errors() {
-        assert!(!RcPrf::new(MAX_HEIGHT + 1).is_ok());
+        assert!(RcPrf::new(MAX_HEIGHT + 1).is_err());
 
         let h = 8u8;
         let rcprf = RcPrf::new(h).unwrap();
