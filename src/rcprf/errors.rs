@@ -6,12 +6,12 @@ use thiserror::Error;
 pub enum RcPrfError {
     /// Invalid evaluation point error (point out of range)
     #[error("Evaluation point {0} outside of valid range {1}")]
-    InvalidEvalPointError(u64, RcPrfRange),
+    InvalidEvalPoint(u64, RcPrfRange),
     /// Invalid evaluation range error (out of range)
     #[error(
         "Invalid evaluation range: {0} is not contained in the valid range {1}"
     )]
-    InvalidEvalRangeError(RcPrfRange, RcPrfRange),
+    InvalidEvalRange(RcPrfRange, RcPrfRange),
     /// Invalid range width
     #[error("Incompatible range width ({0}) and outputs length ({1}).")]
     InvalidRangeWidth(usize, u64),
@@ -19,7 +19,7 @@ pub enum RcPrfError {
     #[error(
         "Invalid constrain range: {0} is not contained in the valid range {1}"
     )]
-    InvalidConstrainRangeError(RcPrfRange, RcPrfRange),
+    InvalidConstrainRange(RcPrfRange, RcPrfRange),
     /// Invalid tree height (height is too large)
     #[error(
         "Invalid tree height: height ({0}) is too large. The maximum height is {1}."

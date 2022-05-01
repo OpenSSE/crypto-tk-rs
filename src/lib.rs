@@ -33,6 +33,7 @@
 #![warn(clippy::unwrap_used)]
 #![warn(clippy::use_debug)]
 #![warn(clippy::map_err_ignore)]
+#![warn(clippy::module_name_repetitions)]
 
 //! A Rust toolkit for cryptographic primitives useful to implement
 //! cryptographic algorithms and protocols (in particular searchable

@@ -72,7 +72,7 @@ impl SerializationTag {
     #[allow(dead_code)]
     pub(crate) fn read_tag(
         reader: &mut dyn std::io::Read,
-    ) -> Result<SerializationTag, SerializationTagDeserializationError> {
+    ) -> Result<SerializationTag, SerializationTagError> {
         let mut buf = [0u8; 2];
 
         reader.read_exact(&mut buf)?;

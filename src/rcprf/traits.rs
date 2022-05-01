@@ -57,7 +57,7 @@ pub trait RangePrf: private::UncheckedRangePrf {
             self.unchecked_eval(x, output);
             Ok(())
         } else {
-            Err(RcPrfError::InvalidEvalPointError(x, self.range()))
+            Err(RcPrfError::InvalidEvalPoint(x, self.range()))
         }
     }
 
@@ -71,10 +71,7 @@ pub trait RangePrf: private::UncheckedRangePrf {
         outputs: &mut [&mut [u8]],
     ) -> Result<(), RcPrfError> {
         if !self.range().contains_range(range) {
-            Err(RcPrfError::InvalidEvalRangeError(
-                range.clone(),
-                self.range(),
-            ))
+            Err(RcPrfError::InvalidEvalRange(range.clone(), self.range()))
         } else if range.width() != outputs.len() as u64 {
             Err(RcPrfError::InvalidRangeWidth(outputs.len(), range.width()))
         } else {
@@ -94,10 +91,7 @@ pub trait RangePrf: private::UncheckedRangePrf {
         outputs: &mut [&mut [u8]],
     ) -> Result<(), RcPrfError> {
         if !self.range().contains_range(range) {
-            Err(RcPrfError::InvalidEvalRangeError(
-                range.clone(),
-                self.range(),
-            ))
+            Err(RcPrfError::InvalidEvalRange(range.clone(), self.range()))
         } else if range.width() != outputs.len() as u64 {
             Err(RcPrfError::InvalidRangeWidth(outputs.len(), range.width()))
         } else {
@@ -115,7 +109,7 @@ pub trait RangePrf: private::UncheckedRangePrf {
         if self.range().contains_range(range) {
             Ok(self.unchecked_constrain(range))
         } else {
-            Err(RcPrfError::InvalidConstrainRangeError(
+            Err(RcPrfError::InvalidConstrainRange(
                 range.clone(),
                 self.range(),
             ))

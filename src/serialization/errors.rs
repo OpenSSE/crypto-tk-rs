@@ -16,7 +16,7 @@ impl Error for SerializationTagConversionError {}
 
 /// Error occurring during the deserialization of a tag
 #[derive(Debug, Error)]
-pub enum SerializationTagDeserializationError {
+pub enum SerializationTagError {
     /// Tag conversion error
     #[error("Tag Deserialization Error - Tag Conversion Error: {0}")]
     ConversionError(#[from] SerializationTagConversionError),
@@ -36,12 +36,12 @@ pub enum CleartextContentDeserializationError {
     IoError(#[from] std::io::Error),
 }
 
-/// Error occuring during the deserialization of an object
+/// Error occurring during the deserialization of an object
 #[derive(Debug, Error)]
 pub enum CleartextDeserializationError {
     /// Error during the tag's deserialization
     #[error(transparent)]
-    TagError(#[from] SerializationTagDeserializationError),
+    TagError(#[from] SerializationTagError),
     /// Serialization tag not matching the deserialized object's type
     #[error("Deserialized tag do not match the object type")]
     InvalidTagError(crate::serialization::tags::SerializationTag),
