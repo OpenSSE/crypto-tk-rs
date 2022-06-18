@@ -11,11 +11,13 @@ use rand::RngCore;
 use zeroize::Zeroize;
 
 // use std::vec::Vec;
+use crate::insecure_clone::{private::InsecureClone, CryptographyClone};
 use crate::serialization::cleartext_serialization::{
     DeserializableCleartextContent, SerializableCleartextContent,
 };
 use crate::serialization::errors::CleartextContentDeserializationError;
-use crate::{insecure_clone::private::InsecureClone, EncryptionError};
+
+use crate::EncryptionError;
 use crate::{DecryptionError, KeyDerivationPrf};
 use crate::{Key256, KeyAccessor};
 
@@ -58,6 +60,8 @@ impl InsecureClone for Cipher {
         }
     }
 }
+
+impl CryptographyClone for Cipher {}
 
 impl Cipher {
     /// Size of a nonce, in bytes

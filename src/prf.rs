@@ -1,6 +1,6 @@
 //! Pseudo-random function
 
-use crate::insecure_clone::private::InsecureClone;
+use crate::insecure_clone::{private::InsecureClone, CryptographyClone};
 use crate::key::{Key, Key256, KeyAccessor};
 use crate::serialization::cleartext_serialization::*;
 use crate::serialization::errors::*;
@@ -42,6 +42,8 @@ impl InsecureClone for Prf {
         }
     }
 }
+
+impl CryptographyClone for Prf {}
 
 impl Prf {
     /// Construct a PRF from a 256 bits key
