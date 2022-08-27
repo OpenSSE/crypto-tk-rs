@@ -1,6 +1,6 @@
 //! Authenticated Encryption
 
-use chacha20poly1305::aead::{AeadInPlace, NewAead};
+use chacha20poly1305::aead::{AeadInPlace, KeyInit};
 use chacha20poly1305::{ChaCha20Poly1305, Nonce, Tag};
 
 // use clear_on_drop::clear_stack_on_return;
