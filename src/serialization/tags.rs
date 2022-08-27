@@ -7,7 +7,7 @@ use crate::{rcprf::*, AeadCipher, Cipher, Key, KeyDerivationPrg, Prf, Prg};
 use {strum::IntoEnumIterator, strum_macros::EnumIter};
 
 /// Tag encoding the type of a serialized cryptographic object
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(test, derive(EnumIter))]
 pub enum SerializationTag {
     Prf = 1,
