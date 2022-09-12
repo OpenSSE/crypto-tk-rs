@@ -16,7 +16,7 @@ license = "AGPL-3.0-or-later"
 default = ["rayon"]
 
 [dev-dependencies]
-criterion = "^0.3"
+criterion = "^0.4"
 strum = "^0.24"
 strum_macros = "^0.24"
 hex = "0.4.3"
